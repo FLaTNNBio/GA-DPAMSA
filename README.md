@@ -181,44 +181,6 @@ The settings used for the genetic algorithm for the test are also shown in the f
 Obviously the higher the SP score, the better the alignment, so in the case of negative values, the closer we are to 0 the better.
 
 
-### Results on a 3x30bp dataset
-Each test in the dataset will have 3 sequences, where each sequence consists of 30 bases. Note that in this case, both DPAMSA and GA-DPAMSA use the RL model trained on a 3x30bp dataset (see in [training_dataset1_3x30bp](./datasets/training_dataset/training_dataset1_3x30bp.py)), so in this case we only want to test the benefits given to us by the genetic algorithm alone, without testing the working mechanism on a sub-board (the RL agent in this case will work on the whole board). 
-In the following figure, you can see the Average sum-of-pairs (SP) score.
-![3x30mean](/img/3x30.png)
-And below the boxplot based on the SP score.
-![3x30box](/img/box-plot-3x30.png)
-
-From the data collected from this first test, we can definitely say that with our genetic algorithm, we have achieved improvements over the DPAMSA tool and we have also better performance than ClustalOmega.
-
-### Results on a 6x30bp dataset
-The next results concern the dataset [dataset1\6x30bp](./datasets/training_dataset/training_dataset1_6x30bp.py), where each test has 6 sequences to align and each is made of 30 nucleotides. Here we will first look at the performance of GA-DPAMSA using the RL model trained on 3x30 dataset (so in this case it will use the concept of sub-boards) and then compare it with DPAMSA trained on 6x30 dataset and GA-DPAMSA with 6x30 dataset (so without using sub-boards).
-![6x30box](/img/av-6x30.png)
-
-![6x30box](/img/boxplot-6x30.png)
-
-We see how our tool in this case turns out to be the best, with little difference from ClustalW.
-In addition, it is important to note that it turns out to be better even than DPAMSA, trained on a 6x30 dataset. This is very important, because it means that we can save time and resources for training the model, and still get very good results (in this case even better).
-
-### Results on a 6x60bp dataset
-In this type of test, what we wanted to check is the goodness of the algorithm as the problem size increases, staying with an RL model trained on small problems. In fact, in the results we will now illustrate, the RL model used by GA-DPAMSA is the one trained on 3x30 datasets (which we have seen before to be even slightly better than the one trained on 6x60)
-The next two figures show, respectively, the average SP score and the boxplot related to SP.
-
-![6x60box](/img/6x60-av.png)
-
-![6x60box](/img/box-plot-6x60.png)
-
-Analyzing the data in the table and graphs, it becomes clear that again, our tool still comes out on top, with ClustalW very close in terms of alignment quality.
-
-### Results on the various GA-DPAMSA configurations.
-In this section, we will illustrate the results obtained with GA-DPAMSA under varying crossover mechanism (horizontal-crossover or vertical-crossover) and mutation (random mutation and best-fitted mutation). The data we will illustrate below are from a test performed with the dataset [dataset2\6x60bp](./datasets/inference_dataset/dataset1_6x60bp.py), with RL model trained on 3x30 dataset. The following images show some comparative graphs of performance at varying settings.
-
-![ga-benc](/img/ga-dpamsa-benc.png)
-
-![ga-benc-box](/img/box-plot-ga-dpamsa.png)
-
-Analyzing the results, we can conclude that as we expected, the most fitted mutation allows us to have an alignment with a higher SP score. This is because at each iteration, we have the RL agent operate it on the individual with the lowest fitness score, in the sub-board with the lowest fitness score, so we always try to improve the various solutions. However, random mutation still turns out to be a good compromise, because it allows us to get the results faster, as we do not need the SP calculation on all the sub-boards to figure out where to operate, and it still offers results that are not very far from the most fitted mutation, in fact there turns out to be a deviation of only about 38 in the average SP score value. As for the different types of crossovers, we did not expect marked differences, and in fact, considering the case of the most fitted mutation, between the two types of crossovers we have a deviation of only 17 points in the SP score. Obviously by repeating the test and changing the parameters of the genetic algorithm the results can vary significantly, in fact with a higher number of interactions it was observed that the random mutation tends to become more distant in terms of SP than the other type.
-
-
 # How change the RL model?
 If you want to use a totally different model of RL, you need to modify the mutation functions in [GA.py](./GA.py).
 You have to modify the ```mutation_on_best_fitted_individuals_worst_sub_board(model)``` function and ```random_mutation(model)```. You need to edit only the code below the ```#Perform Mutation on the sub-board with RL``` comment in both functions.
