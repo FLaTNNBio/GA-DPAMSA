@@ -15,6 +15,23 @@ GA-DPAMSA is an application for multiple sequence alignment using a Deep Reinfor
 
 - [How change the RL Model](#how-change-the-rl-model)
 
+## Dataset creation
+Running the script ```create_dataset.py``` is possible to create a stable and controlled dataset for the experiments.
+
+```
+# Configuration parameters
+num_sequences = 6
+sequence_length = 60
+mutation_rate = 0.10  # Mutation rate 10%
+gap_rate = 0.05  # Gap insertion rate
+number_of_dataset = 50
+min_score_threshold = 50  # Minimum alignment score threshold
+```
+
+The following parameters sets the dataset creation, ```num_sequences``` sets the number of sequences for each dataset, ```sequence_length``` sets the lenght for each sequence, ```mutation_rate``` sets the rate of mutation for the sequence, 
+```gap_rate``` sets the rate for gaps in the sequences, ```number_of_dataset``` sets the number of datasets to create, ```min_score_threshold``` sets the minumun score to accept the dataset. 
+The minumun score is used by the the function ```calculate_alignment_score``` calculates an alignment score for a set of sequences based on pairwise comparisons of characters (nucleotides or gaps) at each position using the score matrix.
+
 ## How the genetic algorithm is implemented 
 The goal is to make sure that given 4 sequences to align, each of length 8, like the one in the following figure (so a $4x8$ board
 
