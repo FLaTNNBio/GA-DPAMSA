@@ -1,14 +1,17 @@
 import random
 import os
 
-#This script is useful to create a dataset of synthetic sequences(for training and for inference) 
-
-# Generate num_sequence sequences and create a dataset with also fasta_file (useful to do comparative test)
+# Configuration parameters
 num_sequences = 6
 sequence_length = 60
-mutation_rate = 0.10  # Mutation rate 20%
+mutation_rate = 0.10  # Mutation rate 10%
+gap_rate = 0.05  # Gap insertion rate
 number_of_dataset = 50
-DATASET_NAME = 'training_dataset1_6x30bp'
+min_score_threshold = 50  # Minimum alignment score threshold
+DATASET_NAME = 'new_training_dataset1_6x60bp'
+
+# Number and lengths of conserved blocks
+conserved_block_sizes = [40]  # List of conserved block lengths
 
 FILE_NAME_SCRIPT_OUTPUT = f'./datasets/{DATASET_NAME}.py'
 FASTA_OUTPUT = f'./datasets/fasta_files/{DATASET_NAME}'
@@ -17,25 +20,107 @@ if not os.path.exists(FASTA_OUTPUT):
     os.makedirs(FASTA_OUTPUT)
 
 
+# Generates a random DNA sequence
 def generate_random_dna_sequence(BP):
     nucleotides = ['A', 'T', 'C', 'G']
     return ''.join(random.choice(nucleotides) for _ in range(BP))
 
-def mutate_sequence(sequence, mutation_rate):
+
+# Introduces controlled mutations only outside conserved blocks
+def mutate_sequence(sequence, mutation_rate, conserved_blocks, insert_positions):
     nucleotides = ['A', 'T', 'C', 'G']
     mutated_sequence = list(sequence)
     for i in range(len(mutated_sequence)):
+        # Checks if the index is within a conserved block
+        if any(insert <= i < insert + len(block) for insert, block in zip(insert_positions, conserved_blocks)):
+            continue  # Skips mutation within the conserved block
+        # Applies mutation outside the conserved block
         if random.random() < mutation_rate:
             mutated_sequence[i] = random.choice(nucleotides)
     return ''.join(mutated_sequence)
 
+
+# Inserts random gaps into the sequence only outside conserved blocks
+def insert_random_gaps(sequence, gap_rate, conserved_blocks, insert_positions, max_gaps=None):
+    gapped_sequence = list(sequence)
+    gap_count = 0
+    for i in range(len(gapped_sequence)):
+        # Checks if the index is within a conserved block
+        if any(insert <= i < insert + len(block) for insert, block in zip(insert_positions, conserved_blocks)):
+            continue  # Skips gap insertion within the conserved block
+        # Inserts gaps only outside conserved blocks
+        if random.random() < gap_rate:
+            gapped_sequence[i] = '-'
+            gap_count += 1
+            if max_gaps and gap_count >= max_gaps:
+                break
+    return ''.join(gapped_sequence)
+
+
+# Calculates the alignment score for a pair of sequences
+def calculate_alignment_score(sequences):
+    total_score = 0
+    for k in range(len(sequences[0])):  # Iterates over positions
+        for i in range(len(sequences) - 1):  # Iterates over sequence indices up to len(sequences) - 1
+            for j in range(i + 1, len(sequences)):  # Iterates over indices after i
+                x = sequences[i][k]
+                y = sequences[j][k]
+                if x == '-' or y == '-':
+                    total_score += -4
+                elif x == y:
+                    total_score += 4
+                else:
+                    total_score += -4
+    return total_score
+
+
+# Generates a dataset with common blocks until the alignment threshold is reached
+def generate_dataset_with_common_blocks(seq_length, conserved_blocks, mutation_rate, gap_rate, min_score_threshold):
+    while True:
+        # Generates the conserved blocks for the dataset
+        conserved_blocks_sequences = [generate_random_dna_sequence(length) for length in conserved_blocks]
+
+        # Generates random positions for the conserved blocks in the sequences
+        insert_positions = [random.randint(0, seq_length - len(block)) for block in conserved_blocks_sequences]
+
+        # Generates sequences with conserved blocks inserted at the same positions
+        sequences = []
+        for _ in range(num_sequences):
+            # Creates a variable region
+            variable_region = generate_random_dna_sequence(seq_length)
+
+            # Inserts each conserved block at the specified position
+            for i, block in enumerate(conserved_blocks_sequences):
+                position = insert_positions[i]
+                variable_region = (
+                        variable_region[:position] +
+                        block +
+                        variable_region[position + len(block):]
+                )
+
+            # Introduces mutations and gaps only outside conserved blocks
+            mutated_sequence = mutate_sequence(variable_region, mutation_rate, conserved_blocks_sequences,
+                                               insert_positions)
+            gapped_sequence = insert_random_gaps(mutated_sequence, gap_rate, conserved_blocks_sequences,
+                                                 insert_positions)
+            sequences.append(gapped_sequence)
+
+        # Calculates the alignment score
+        score = calculate_alignment_score(sequences)
+        if score >= min_score_threshold:
+            return sequences, conserved_blocks_sequences, insert_positions, score
+
+
+# Writes the sequences to a FASTA file
 def write_fasta_file(filename, sequences):
     with open(filename, 'w') as f:
         for i, seq in enumerate(sequences):
-            header = f">Sequence_{i+1}\n"  # Header for each sequence
+            header = f">Sequence_{i + 1}\n"
             f.write(header)
             f.write(seq + "\n")
 
+
+# Collects and structures datasets in a Python file
 def write_dataset_dpamsa(fasta_files, output_file):
     sequences = {}
     for file in fasta_files:
@@ -64,7 +149,7 @@ file_name = '{os.path.basename(output_file)}'
 
 datasets = {fasta_file_names}
 """
-    for i, filename in enumerate(fasta_files):  # Crea dataset0, dataset1, ... fino a quanto necessario
+    for i, filename in enumerate(fasta_files):
         dataset_name = f"dataset{i}"
         if filename in sequences:
             dataset_sequences = sequences[filename]
@@ -72,24 +157,27 @@ datasets = {fasta_file_names}
             sequence_list = list(dataset_sequences.values())
             file_content += f'{sequence_list}\n'
 
-    # Scrivi il contenuto nel file Python
     with open(output_file, 'w') as f:
         f.write(file_content)
-        
+
+
+# Generates datasets until the score is within the desired range
 fasta_files = []
 for dataset in range(number_of_dataset):
-    sequences = []
-    for _ in range(num_sequences):
-        sequence = generate_random_dna_sequence(sequence_length)
-        mutated_sequence = mutate_sequence(sequence, mutation_rate)
-        sequences.append(mutated_sequence)
+    sequences, conserved_blocks, insert_positions, score = generate_dataset_with_common_blocks(
+        sequence_length, conserved_block_sizes, mutation_rate, gap_rate, min_score_threshold
+    )
 
-    fasta_filename = f'test{dataset}'+ '.fasta'
-    fasta_filename = os.path.join(FASTA_OUTPUT,fasta_filename)
+    # Prints the conserved blocks and their positions
+    for i, block in enumerate(conserved_blocks):
+        print(f"Dataset {dataset}: Conserved block {i + 1} '{block}' inserted at position {insert_positions[i]}")
+
+    # Saves the dataset
+    fasta_filename = f'test{dataset}.fasta'
+    fasta_filename = os.path.join(FASTA_OUTPUT, fasta_filename)
     write_fasta_file(fasta_filename, sequences)
-
     fasta_files.append(fasta_filename)
-    print(f"Fasta file created in {fasta_filename}")
+    print(f"Fasta file created in {fasta_filename} with score {score}")
 
-write_dataset_dpamsa(fasta_files,FILE_NAME_SCRIPT_OUTPUT)
+write_dataset_dpamsa(fasta_files, FILE_NAME_SCRIPT_OUTPUT)
 print(f"Dataset file created in {FILE_NAME_SCRIPT_OUTPUT}")
