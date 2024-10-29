@@ -8,7 +8,7 @@ mutation_rate = 0.10  # Mutation rate 10%
 gap_rate = 0.05  # Gap insertion rate
 number_of_dataset = 50
 min_score_threshold = 50  # Minimum alignment score threshold
-DATASET_NAME = 'new_training_dataset1_6x60bp'
+DATASET_NAME = 'dataset_6x60bp'
 
 # Number and lengths of conserved blocks
 conserved_block_sizes = [40]  # List of conserved block lengths
