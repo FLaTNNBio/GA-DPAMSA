@@ -165,8 +165,7 @@ If you want to compare the results from GA-DPAMSA with ClustalW, ClustalOmega an
 ## Training
 To execute the training of the RL model, you neeed to run the [train.py](./train.py) script. In the first row in the script you can modify the import of the training dataset and you can put any dataset you want, as long as you follow the structure of those present in the [dataset/training_dataset](./datasets/training_dataset/) folder. In the call to the multi_train() function you can change the name of the output model, and the model will be inserted into the [result/weightDPAMSA](./result/weightDPAMSA/) folder at the end of the training.
 
-## Result
-Here some graphs will be illustrated regarding the result of some tests performed on DPAMSA (without our Genetic Algorithm), GA-DPAMSA (with our Genetic Algorithm), DPAMSA, ClustalW, ClustalOmega and MSAprobs to demonstrate that our algorithm, on alignment problems of many sequences with more than 30 bases, appears to be better than all of these tools . Every datasets that is used in the evaluation is made up by differets test, and each test corresponds to an alignment problem to be solved.
+## Parameters
 The settings used for the genetic algorithm for the test are also shown in the following table:
 
 |GA Parameter|Value|
