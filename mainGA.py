@@ -1,4 +1,4 @@
-import datasets.training_dataset.training_dataset1_6x60bp as dataset1
+import datasets.training_dataset.encode_project_dataset_4x101bp as dataset1
 from GA import GA
 import torch
 import os
