@@ -19,7 +19,6 @@ sp_clustalo_values = []
 sp_msaprobs_values = []
 sp_clustalw_values = []
 
-
 # Crea la directory clustalw_output se non esiste
 clustalw_output_folder = './clustalw_output'
 os.makedirs(clustalw_output_folder, exist_ok=True)
