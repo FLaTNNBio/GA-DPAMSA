@@ -32,7 +32,8 @@ output_folders = {
     'tcoffee': './tcoffee_output',
     'mafft': './mafft_output',
     'muscle5': './muscle5_output',
-    'upp': './upp_output'
+    'upp': './upp_output',
+    'pasta': './pasta_output'
 }
 
 for folder in output_folders.values():
@@ -50,6 +51,7 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     command_mafft = ['mafft', '--auto', file_path]
     command_muscle5 = ['muscle5', '-align', file_path, '-output', f'./muscle5_output/{file}']
     command_upp = ['run_upp.py', '-s', file_path, '-m', 'dna', '-d', f'./upp_output/{file}_output']
+    command_pasta = ['run_pasta.py', '-i', file_path, '-o', f'./pasta_output/{file}_output']
 
     # Esegui Clustal Omega
     alignment_output_clustalo = subprocess.run(command_clustalo, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout
@@ -79,7 +81,12 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     subprocess.run(command_upp, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
     with open(f'./upp_output/{file}_output/output_alignment.fasta', 'r') as f:
         alignment_output_upp = f.read()
-    with open(f'./upp_output/{file}_output/output_pasta.fasta', 'r') as f:
+
+    # Esegui PASTA
+    subprocess.run(command_pasta, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+    # Estrai il nome del file senza estensione
+    file_name = os.path.splitext(file)[0]
+    with open(f'./pasta_output/{file}_output/pastajob.marker001.{file_name}.aln', 'r') as f:
         alignment_output_pasta = f.read()
 
     # Calcola i Sum of Pairs per ogni tool
@@ -116,18 +123,18 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     sp_upp_values.append(sum_of_pairs_upp)
 
 # Salva i risultati delle SP per ogni file
-with open(f'./result/benchmark/{dataset_name}_all_tools.csv', mode='w', newline='') as file_csv:
+with open(f'./result/benchmark/{dataset_name}_tools_sp_score.csv', mode='w', newline='') as file_csv:
     writer = csv.writer(file_csv)
     writer.writerow([
         "File name",
-        "SP_ClustalOmega",
-        "SP_MSAProbs",
-        "SP_ClustalW",
-        "SP_TCoffee",
-        "SP_MAFFT",
-        "SP_MUSCLE5",
-        "SP_PASTA",
-        "SP_UPP"
+        "ClustalOmega",
+        "MSAProbs",
+        "ClustalW",
+        "TCoffee",
+        "MAFFT",
+        "MUSCLE5",
+        "PASTA",
+        "UPP"
     ])
     writer.writerows(csv_data)
 
@@ -142,7 +149,7 @@ average_sp_pasta = sum(sp_pasta_values) / len(sp_pasta_values)
 average_sp_upp = sum(sp_upp_values) / len(sp_upp_values)
 
 # Salva i risultati medi in un altro file CSV
-with open(f'./result/benchmark/{dataset_name}_average_sp.csv', mode='w', newline='') as avg_csv:
+with open(f'./result/benchmark/{dataset_name}_tools_average_sp.csv', mode='w', newline='') as avg_csv:
     writer = csv.writer(avg_csv)
     writer.writerow(["Tool", "Average SP"])
     writer.writerow(["ClustalOmega", average_sp_clustalo])
@@ -170,3 +177,69 @@ for file in os.listdir(root_directory):
 for folder in output_folders.values():
     if os.path.exists(folder):  # Verifica se la directory esiste
         shutil.rmtree(folder)
+
+### DATA VISUALIZATION ###
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import seaborn as sns
+
+# Carica i dati dal file CSV
+data = pd.read_csv(f'./result/benchmark/{dataset_name}_tools_sp_score.csv')
+
+# Riorganizza i dati in formato "long" per facilitare la visualizzazione con seaborn
+data_long = pd.melt(data, id_vars=["File name"],
+                    value_vars=["ClustalOmega", "MSAProbs", "ClustalW",
+                                "TCoffee", "MAFFT", "MUSCLE5",
+                                "PASTA", "UPP"],
+                    var_name='Tool', value_name='SP_Score')
+
+# Configura il tema di seaborn per uno stile più pulito
+sns.set(style="whitegrid")
+
+# Colori personalizzati per i tool
+palette = sns.color_palette("Set2", len(data_long['Tool'].unique()))
+
+### BoxPlot per i dati generali di SP score ###
+plt.figure(figsize=(12, 6))
+box_plot = sns.boxplot(x='Tool', y='SP_Score', data=data_long, palette=palette)
+
+# Imposta il colore dei contorni più scuro e il riempimento più trasparente
+for patch, color in zip(box_plot.patches, palette):
+    # Riempimento con trasparenza
+    transparent_fill = mcolors.to_rgba(color, alpha=0.5)  # Imposta un'alpha per il riempimento
+    patch.set_facecolor(transparent_fill)
+
+    # Imposta il colore per i bordi
+    patch.set_edgecolor(color)
+    patch.set_linewidth(1.5)
+
+# Imposta il colore delle linee (mediana, whiskers, ecc.) usando i colori della palette
+for i, line in enumerate(box_plot.lines):
+    # Ogni box ha 6 linee (mediana, whiskers, caplines)
+    color = palette[i // 6 % len(palette)]  # Associa il colore corretto a ogni set di linee
+    line.set_color(color)
+    line.set_linewidth(1.5)
+
+plt.title('Distribuzione degli SP Scores per ogni Tool')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig(f'./result/benchmark/{dataset_name}_boxplot.png')  # Salva il grafico come immagine
+plt.show()
+
+### BarPlot per i valori medi di SP score ###
+# Calcola i valori medi dal DataFrame
+mean_sp_scores = data_long.groupby('Tool')['SP_Score'].mean().reset_index()
+
+plt.figure(figsize=(10, 6))
+bar_plot = sns.barplot(x='Tool', y='SP_Score', data=mean_sp_scores, palette=palette)
+
+# Aggiungi i valori medi sopra le barre
+for index, row in mean_sp_scores.iterrows():
+    bar_plot.text(index, row.SP_Score + 0.01, round(row.SP_Score, 2), color='black', ha="center")
+
+plt.title('Valori Medi degli SP Scores per ogni Tool')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig(f'./result/benchmark/{dataset_name}_barplot.png')  # Salva il grafico come immagine
+plt.show()
