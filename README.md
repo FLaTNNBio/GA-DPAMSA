@@ -100,7 +100,7 @@ Once the application is started, the following operations will be executed over 
 4. Crossover: Create new individuals through crossover operations.
 
 At the end of $n$ iterations, the fitness score is recalculated for each individual (since the cycle ends with crossover, we evaluate the fitness of the newly generated population from the last iteration).
-Next, the individual with the highest sum-of-pairs score is extracted from the population. Its board is then converted back from integers to characters (representing nucleotides). This aligned sequence, along with its sum-of-pairs value, is displayed on the screen and saved into a file in the [results](./result/reportDPAMSA_GA/) folder of the project.
+Next, the individual with the highest sum-of-pairs score is extracted from the population. Its board is then converted back from integers to characters (representing nucleotides). This aligned sequence, along with its sum-of-pairs value, is displayed on the screen and saved into a file in the [results](results/reportDPAMSA_GA/) folder of the project.
 
 # How to use GA-DPAMSA
 First clone the repository locally
@@ -174,12 +174,12 @@ In particular, in the ```for``` executed based on the iteration number of the ge
 If you have trained a new model with DPAMSA and you want to use that for inference, just edit the inference function call in mainGA.py and insert the path to the new model.
 
 ## Evaluation
-If you want to test GA-DPAMSA, you can run some scripts that run the benchmark on already prepared datasets or you can create some new datasets made from synthetic sequences, launching the [create_fataset.py](./datasets/create_dataset.py) script in the datasets folder. From this script you can personalize the  ```num_sequences```, the ```sequence_length```, the ```mutation_rate```, the ```number_of_dataset``` and the ```DATASET_NAME```. The output dataset will be placed in the [/datasets](./datasets/) folder.
-By running the [mainGA.py](./mainGA.py) file on one of these datasets, all the results are inserted in the [reportDPAMSA_GA folder](./result/reportDPAMSA_GA/), with the value of the sum-of-pairs and the alignment, for each of the tests in the dataset.
+If you want to test GA-DPAMSA, you can run some scripts that run the benchmark on already prepared datasets or you can create some new datasets made from synthetic sequences, launching the [create_fataset.py](datasets/synthetic_dataset_generation/create_dataset.py) script in the datasets folder. From this script you can personalize the  ```num_sequences```, the ```sequence_length```, the ```mutation_rate```, the ```number_of_dataset``` and the ```DATASET_NAME```. The output dataset will be placed in the [/datasets](./datasets/) folder.
+By running the [mainGA.py](./mainGA.py) file on one of these datasets, all the results are inserted in the [reportDPAMSA_GA folder](results/reportDPAMSA_GA/), with the value of the sum-of-pairs and the alignment, for each of the tests in the dataset.
 
 
 ## Training
-To execute the training of the RL model, you neeed to run the [train.py](./train.py) script. In the first row in the script you can modify the import of the training dataset and you can put any dataset you want, as long as you follow the structure of those present in the [dataset/training_dataset](./datasets/training_dataset/) folder. In the call to the multi_train() function you can change the name of the output model, and the model will be inserted into the [result/weightDPAMSA](./result/weightDPAMSA/) folder at the end of the training.
+To execute the training of the RL model, you neeed to run the [train.py](./train.py) script. In the first row in the script you can modify the import of the training dataset and you can put any dataset you want, as long as you follow the structure of those present in the [dataset/training_dataset](./datasets/training_dataset/) folder. In the call to the multi_train() function you can change the name of the output model, and the model will be inserted into the [result/weightDPAMSA](DPAMSA/weights/) folder at the end of the training.
 
 ## Parameters
 The settings used for the genetic algorithm for the test are also shown in the following table:
