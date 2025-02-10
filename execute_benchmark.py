@@ -4,6 +4,10 @@ import utils
 import shutil
 import csv
 from tqdm import tqdm
+from mainGA import inference as ga_inference  # Importa la funzione di GA-DPAMSA
+import pandas as pd
+import config
+import datasets.inference_dataset.encode_project_dataset_4x101bp as dataset1
 
 # Nome del dataset e cartella dei file
 dataset_name = 'encode_project_dataset_4x101bp'
@@ -20,7 +24,6 @@ csv_data = []
 sp_clustalo_values = []
 sp_msaprobs_values = []
 sp_clustalw_values = []
-sp_tcoffee_values = []
 sp_mafft_values = []
 sp_muscle5_values = []
 sp_pasta_values = []
@@ -29,7 +32,6 @@ sp_upp_values = []
 # Crea la directory per gli output di altri tool se necessario
 output_folders = {
     'clustalw': './clustalw_output',
-    'tcoffee': './tcoffee_output',
     'mafft': './mafft_output',
     'muscle5': './muscle5_output',
     'upp': './upp_output',
@@ -47,7 +49,6 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     command_clustalo = ['clustalo', '-i', file_path]
     command_msaprobs = ['msaprobs', file_path]
     command_clustalw = ['clustalw', file_path, '-OUTPUT=FASTA', f'-OUTFILE=./clustalw_output/{file}']
-    command_tcoffee = ['t_coffee', file_path, '-output=fasta', f'-outfile=./tcoffee_output/{file}']
     command_mafft = ['mafft', '--auto', file_path]
     command_muscle5 = ['muscle5', '-align', file_path, '-output', f'./muscle5_output/{file}']
     command_upp = ['run_upp.py', '-s', file_path, '-m', 'dna', '-d', f'./upp_output/{file}_output']
@@ -64,11 +65,6 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     with open(f'./clustalw_output/{file}', 'r') as f:
         alignment_output_clustalw = f.read()
 
-    # Esegui T-Coffee
-    subprocess.run(command_tcoffee, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
-    with open(f'./tcoffee_output/{file}', 'r') as f:
-        alignment_output_tcoffee = f.read()
-
     # Esegui MAFFT
     alignment_output_mafft = subprocess.run(command_mafft, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout
 
@@ -84,7 +80,6 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
 
     # Esegui PASTA
     subprocess.run(command_pasta, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
-    # Estrai il nome del file senza estensione
     file_name = os.path.splitext(file)[0]
     with open(f'./pasta_output/{file}_output/pastajob.marker001.{file_name}.aln', 'r') as f:
         alignment_output_pasta = f.read()
@@ -93,7 +88,6 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     sum_of_pairs_clustalo = utils.sum_of_pairs_from_fasta(alignment_output_clustalo)
     sum_of_pairs_msaprobs = utils.sum_of_pairs_from_fasta(alignment_output_msaprobs)
     sum_of_pairs_clustalw = utils.sum_of_pairs_from_fasta(alignment_output_clustalw)
-    sum_of_pairs_tcoffee = utils.sum_of_pairs_from_fasta(alignment_output_tcoffee)
     sum_of_pairs_mafft = utils.sum_of_pairs_from_fasta(alignment_output_mafft)
     sum_of_pairs_muscle5 = utils.sum_of_pairs_from_fasta(alignment_output_muscle5)
     sum_of_pairs_pasta = utils.sum_of_pairs_from_fasta(alignment_output_pasta)
@@ -105,7 +99,6 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
         sum_of_pairs_clustalo,
         sum_of_pairs_msaprobs,
         sum_of_pairs_clustalw,
-        sum_of_pairs_tcoffee,
         sum_of_pairs_mafft,
         sum_of_pairs_muscle5,
         sum_of_pairs_pasta,
@@ -116,25 +109,41 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
     sp_clustalo_values.append(sum_of_pairs_clustalo)
     sp_msaprobs_values.append(sum_of_pairs_msaprobs)
     sp_clustalw_values.append(sum_of_pairs_clustalw)
-    sp_tcoffee_values.append(sum_of_pairs_tcoffee)
     sp_mafft_values.append(sum_of_pairs_mafft)
     sp_muscle5_values.append(sum_of_pairs_muscle5)
     sp_pasta_values.append(sum_of_pairs_pasta)
     sp_upp_values.append(sum_of_pairs_upp)
 
+# **Esegui GA-DPAMSA una sola volta dopo il ciclo**
+ga_inference(dataset=dataset1, model_path='model_3x30', truncate_file=True)
+
+# **Leggi il CSV generato da GA-DPAMSA**
+ga_csv_path = os.path.join(config.csv_path, f"{dataset_name}.csv")
+ga_data = pd.read_csv(ga_csv_path)
+
+# **Aggiungi la colonna SP Score di GA-DPAMSA ai dati esistenti**
+ga_sp_scores = ga_data['SP Score'].tolist()
+
+# **Assicurati che la lunghezza dei dati corrisponda**
+if len(ga_sp_scores) == len(csv_data):
+    for i in range(len(csv_data)):
+        csv_data[i].append(ga_sp_scores[i])
+else:
+    print("Errore: Il numero di risultati GA-DPAMSA non corrisponde al numero di file processati.")
+
 # Salva i risultati delle SP per ogni file
-with open(f'./result/benchmark/{dataset_name}_tools_sp_score.csv', mode='w', newline='') as file_csv:
+with open(f'{config.csv_path}/{dataset_name}_tools_sp_score.csv', mode='w', newline='') as file_csv:
     writer = csv.writer(file_csv)
     writer.writerow([
         "File name",
         "ClustalOmega",
         "MSAProbs",
         "ClustalW",
-        "TCoffee",
         "MAFFT",
         "MUSCLE5",
         "PASTA",
-        "UPP"
+        "UPP",
+        "GA-DPAMSA"
     ])
     writer.writerows(csv_data)
 
@@ -142,24 +151,25 @@ with open(f'./result/benchmark/{dataset_name}_tools_sp_score.csv', mode='w', new
 average_sp_clustalo = sum(sp_clustalo_values) / len(sp_clustalo_values)
 average_sp_msaprobs = sum(sp_msaprobs_values) / len(sp_msaprobs_values)
 average_sp_clustalw = sum(sp_clustalw_values) / len(sp_clustalw_values)
-average_sp_tcoffee = sum(sp_tcoffee_values) / len(sp_tcoffee_values)
 average_sp_mafft = sum(sp_mafft_values) / len(sp_mafft_values)
 average_sp_muscle5 = sum(sp_muscle5_values) / len(sp_muscle5_values)
 average_sp_pasta = sum(sp_pasta_values) / len(sp_pasta_values)
 average_sp_upp = sum(sp_upp_values) / len(sp_upp_values)
+average_sp_ga_dpamsa = sum(ga_sp_scores) / len(ga_sp_scores)
 
 # Salva i risultati medi in un altro file CSV
-with open(f'./result/benchmark/{dataset_name}_tools_average_sp.csv', mode='w', newline='') as avg_csv:
+with open(f'{config.csv_path}/{dataset_name}_tools_average_sp.csv', mode='w', newline='') as avg_csv:
     writer = csv.writer(avg_csv)
     writer.writerow(["Tool", "Average SP"])
     writer.writerow(["ClustalOmega", average_sp_clustalo])
     writer.writerow(["MSAProbs", average_sp_msaprobs])
     writer.writerow(["ClustalW", average_sp_clustalw])
-    writer.writerow(["T-Coffee", average_sp_tcoffee])
     writer.writerow(["MAFFT", average_sp_mafft])
     writer.writerow(["MUSCLE5", average_sp_muscle5])
     writer.writerow(["PASTA", average_sp_pasta])
     writer.writerow(["UPP", average_sp_upp])
+    writer.writerow(["GA-DPAMSA", average_sp_ga_dpamsa])
+
 
 # Rimuovi i file DND generati da Clustal Omega
 for file in os.listdir(dataset_folder):
@@ -185,13 +195,18 @@ import matplotlib.colors as mcolors
 import seaborn as sns
 
 # Carica i dati dal file CSV
-data = pd.read_csv(f'./result/benchmark/{dataset_name}_tools_sp_score.csv')
+data = pd.read_csv(f'{config.csv_path}/{dataset_name}_tools_sp_score.csv')
 
 # Riorganizza i dati in formato "long" per facilitare la visualizzazione con seaborn
 data_long = pd.melt(data, id_vars=["File name"],
-                    value_vars=["ClustalOmega", "MSAProbs", "ClustalW",
-                                "TCoffee", "MAFFT", "MUSCLE5",
-                                "PASTA", "UPP"],
+                    value_vars=["ClustalOmega",
+                                "MSAProbs",
+                                "ClustalW",
+                                "MAFFT",
+                                "MUSCLE5",
+                                "PASTA",
+                                "UPP",
+                                "GA-DPAMSA"],
                     var_name='Tool', value_name='SP_Score')
 
 # Configura il tema di seaborn per uno stile più pulito
@@ -224,7 +239,7 @@ for i, line in enumerate(box_plot.lines):
 plt.title('Distribuzione degli SP Scores per ogni Tool')
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(f'./result/benchmark/{dataset_name}_boxplot.png')  # Salva il grafico come immagine
+plt.savefig(f'{config.charts_path}/{dataset_name}_boxplot.png')  # Salva il grafico come immagine
 plt.show()
 
 ### BarPlot per i valori medi di SP score ###
@@ -241,5 +256,5 @@ for index, row in mean_sp_scores.iterrows():
 plt.title('Valori Medi degli SP Scores per ogni Tool')
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(f'./result/benchmark/{dataset_name}_barplot.png')  # Salva il grafico come immagine
+plt.savefig(f'{config.charts_path}/{dataset_name}_barplot.png')  # Salva il grafico come immagine
 plt.show()

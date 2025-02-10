@@ -15,8 +15,8 @@ GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER = 0.20 #20%
 AGENT_WINDOW_ROW = 3
 AGENT_WINDOW_COLUMN = 30
 
-DATASET_ROW = 3
-DATASET_COLUMN = 30
+DATASET_ROW = 4
+DATASET_COLUMN = 101
 
 NUM_TOTAL_RANGES = int((DATASET_ROW / AGENT_WINDOW_ROW) * (DATASET_COLUMN/AGENT_WINDOW_COLUMN))
 
@@ -39,7 +39,13 @@ device = 'cpu'
 # Get the absolute path to the root directory of the project
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+base_dataset_path = os.path.join(PROJECT_ROOT, "datasets")
+fasta_files_path = os.path.join(base_dataset_path, "fasta_files")
+training_dataset_path = os.path.join(base_dataset_path, "training_dataset")
+inference_dataset_path = os.path.join(base_dataset_path, "inference_dataset")
+
 weight_path_DPAMSA = os.path.join(PROJECT_ROOT, "DPAMSA", "weights")
+
 base_results_dir = os.path.join(PROJECT_ROOT, "results")
 report_path_DPAMSA = os.path.join(base_results_dir, "reports", "DPAMSA")
 report_path_GA_DPAMSA = os.path.join(base_results_dir, "reports", "GA-DPAMSA")

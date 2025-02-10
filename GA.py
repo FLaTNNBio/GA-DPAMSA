@@ -1,12 +1,10 @@
-import random
-import utils
-import torch
-import os
 from DPAMSA.env import Environment
 from DPAMSA.dqn import DQN
 import config
-from tqdm import tqdm
+import utils
 import copy
+import random
+
 
 nucleotides_map = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 'a': 1, 't': 2, 'c': 3, 'g': 4, '-': 5}
 nucleotides = ['A', 'T', 'C', 'G', '-']
