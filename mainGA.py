@@ -1,13 +1,10 @@
-import datasets.training_dataset.encode_project_dataset_4x101bp as dataset1
+import datasets.inference_dataset.dataset1_3x30bp as dataset1
 from GA import GA
-import torch
-import os
-from env_GA import Environment
-from dqn import DQN
 import config
+import csv
+import os
 from tqdm import tqdm
-import random
-import utils
+
 
 dataset = dataset1
 
@@ -35,17 +32,26 @@ def output_parameters():
     print(f"Percentage of individuals to mutate for iteration (only if is used mutation on the worst-fitted individuals): {config.GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER}")
     print('\n')
 
-def inference(tag='',start=0, end=1, truncate_file=False, model_path='model', dataset=dataset):
-    output_parameters()
-    print("Dataset number: {}".format(len(dataset.datasets)))
+def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncate_file=True):
 
-    report_file_name = os.path.join(config.report_path_DPAMSA_GA, "{}.rpt".format(tag))
+    output_parameters()
+
+    tag = os.path.splitext(dataset.file_name)[0]
+    report_file_name = os.path.join(config.report_path_GA_DPAMSA, f"{tag}.rpt")
+    csv_file_name = os.path.join(config.csv_path, f"{tag}.csv")
 
     if truncate_file:
-        with open(report_file_name, 'w') as _:
-            _.truncate()
+        with open(report_file_name, 'w'):
+            pass
+        with open(csv_file_name, 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            # writer.writerow(["Dataset Name", "Number of Sequences", "Alignment Length", "SP Score", "Exact Matches",
+            #                 "Column Score"])
+            writer.writerow(["Dataset Name", "SP Score"])
 
-    for dataset_name in dataset.datasets:
+    datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
+
+    for index, dataset_name in enumerate(tqdm(datasets_to_process, desc="Processing Datasets"), start):
         
         if not hasattr(dataset, dataset_name):
             continue
@@ -82,16 +88,28 @@ def inference(tag='',start=0, end=1, truncate_file=False, model_path='model', da
             #taking the first part from one individual and the second part from another individual
             ga.horizontal_crossover()
             #ga.vertical_crossover()
-        #In the last iteration, we have to perform again the calculation (last operation is the crossover so we need to recheck the score) 
+        #In the last iteration, we have to perform again the calculation (last operation is the crossover, so we need to recheck the score)
         ga.calculate_fitness_score()
         most_fitted_chromosome,sum_pairs_score = ga.get_most_fitted_chromosome()
         most_fitted_chromosome_converted = ga.get_alignment(most_fitted_chromosome)
-        print(f"Dataset name: {dataset_name}")
-        print(f"SP:{sum_pairs_score}")
-        print(f"Alignment:\n{most_fitted_chromosome_converted}")
-        report = f"Dataset name: {dataset_name}\nSP: {sum_pairs_score}\nAlignment:\n{most_fitted_chromosome_converted}\n\n"
-        with open(os.path.join(config.report_path_DPAMSA_GA, "{}.rpt".format(tag)), 'a') as report_file:
+
+        report = (
+            f"#: {dataset_name}\n"
+            f"SP: {sum_pairs_score}\n"
+            f"Alignment:\n{most_fitted_chromosome_converted}\n\n"
+        )
+
+        with open(report_file_name, 'a') as report_file:
             report_file.write(report)
-            
+
+        with open(csv_file_name, 'a', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow([dataset_name, sum_pairs_score])
+
+    print(f"\nOperazione completata con successo.")
+    print(f"Il file di report è stato salvato in: {config.report_path_GA_DPAMSA}")
+    print(f"Il file CSV è stato salvato in: {config.csv_path}")
+
+
 if __name__ == "__main__":
-    inference(model_path='model_3x30',tag=dataset.file_name)
+    inference(model_path='model_3x30')

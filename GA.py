@@ -1,10 +1,9 @@
-import config
 import random
 import utils
 import torch
 import os
-from env_GA import Environment
-from dqn import DQN
+from DPAMSA.env import Environment
+from DPAMSA.dqn import DQN
 import config
 from tqdm import tqdm
 import copy
@@ -200,7 +199,7 @@ class GA:
                 sub_board.append(sub_genes)
 
             #Perform Mutation on the sub-board with RL
-            env = Environment(sub_board)
+            env = Environment(sub_board, convert_data=False)
             agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
             agent.load(model_path)
             state = env.reset()
@@ -255,7 +254,7 @@ class GA:
                 sub_board.append(sub_genes)
 
             #Perform Mutation on the sub-board with RL
-            env = Environment(sub_board)
+            env = Environment(sub_board, convert_data=False)
             agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
             agent.load(model_path)
             state = env.reset()
