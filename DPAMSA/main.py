@@ -1,4 +1,4 @@
-import datasets.inference_dataset.dataset1_3x30bp as dataset
+import datasets.training_dataset.synthetic_dataset_4x101bp as dataset1
 from DPAMSA.env import Environment
 from DPAMSA.dqn import DQN
 import config
@@ -7,12 +7,12 @@ import os
 from tqdm import tqdm
 import torch
 
-dataset = dataset
+dataset = dataset1
 
 
 def main():
     config.device = torch.device(config.device_name)
-    multi_train(dataset.file_name, 0, 25, truncate_file=True)
+    multi_train(dataset, truncate_file=True)
 
 
 def output_parameters():
@@ -33,7 +33,7 @@ def output_parameters():
     print('\n')
 
 
-def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_path='model'):
+def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_path='model_4x101'):
 
     output_parameters()
 
@@ -237,6 +237,6 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
 
 if __name__ == "__main__":
 
-    # main()
+    main()
 
-    inference(model_path='model_3x30')
+    #inference(model_path='model_3x30')

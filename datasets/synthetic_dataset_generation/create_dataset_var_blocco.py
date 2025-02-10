@@ -2,13 +2,13 @@ import random
 import os
 
 # Parametri di configurazione
-num_sequences = 6
-sequence_length = 30
+num_sequences = 4
+sequence_length = 101
 mutation_rate = 0.10  # Tasso di mutazione 10%
 gap_rate = 0.05  # Tasso di inserimento gap
 number_of_dataset = 50
 min_score_threshold = 50  # Soglia minima del punteggio di allineamento
-DATASET_NAME = 'new_training_dataset1_6x30bp'
+DATASET_NAME = 'new_training_dataset1_4x101bp'
 
 # Numero e lunghezze dei blocchi conservati
 conserved_block_sizes = [10, 10]  # Lista delle lunghezze dei blocchi conservati

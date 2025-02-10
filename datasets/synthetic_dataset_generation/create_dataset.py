@@ -1,20 +1,22 @@
 import random
 import os
+import config
+from tqdm import tqdm
 
 # Configuration parameters
-num_sequences = 6
-sequence_length = 60
+num_sequences = 3
+sequence_length = 30
 mutation_rate = 0.10  # Mutation rate 10%
 gap_rate = 0.05  # Gap insertion rate
 number_of_dataset = 50
-min_score_threshold = 50  # Minimum alignment score threshold
-DATASET_NAME = 'dataset_6x60bp'
+min_score_threshold = 10  # Minimum alignment score threshold
+DATASET_NAME = 'synthetic_dataset_3x30bp'
 
 # Number and lengths of conserved blocks
-conserved_block_sizes = [40]  # List of conserved block lengths
+conserved_block_sizes = [5]  # List of conserved block lengths
 
-FILE_NAME_SCRIPT_OUTPUT = f'./datasets/{DATASET_NAME}.py'
-FASTA_OUTPUT = f'./datasets/fasta_files/{DATASET_NAME}'
+FILE_NAME_SCRIPT_OUTPUT = f'{config.training_dataset_path}/{DATASET_NAME}.py'
+FASTA_OUTPUT = f'{config.fasta_files_path}/{DATASET_NAME}'
 
 if not os.path.exists(FASTA_OUTPUT):
     os.makedirs(FASTA_OUTPUT)
@@ -148,7 +150,8 @@ def write_dataset_dpamsa(fasta_files, output_file):
 file_name = '{os.path.basename(output_file)}'
 
 datasets = {fasta_file_names}
-"""
+    """
+
     for i, filename in enumerate(fasta_files):
         dataset_name = f"dataset{i}"
         if filename in sequences:
@@ -161,23 +164,24 @@ datasets = {fasta_file_names}
         f.write(file_content)
 
 
-# Generates datasets until the score is within the desired range
-fasta_files = []
-for dataset in range(number_of_dataset):
-    sequences, conserved_blocks, insert_positions, score = generate_dataset_with_common_blocks(
-        sequence_length, conserved_block_sizes, mutation_rate, gap_rate, min_score_threshold
-    )
+if __name__ == "__main__":
+    fasta_files = []
+    for dataset in tqdm(range(number_of_dataset)):
+        sequences, conserved_blocks, insert_positions, score = generate_dataset_with_common_blocks(
+            sequence_length, conserved_block_sizes, mutation_rate, gap_rate, min_score_threshold
+        )
 
-    # Prints the conserved blocks and their positions
-    for i, block in enumerate(conserved_blocks):
-        print(f"Dataset {dataset}: Conserved block {i + 1} '{block}' inserted at position {insert_positions[i]}")
+        # Stampa i dettagli dei blocchi conservati
+        for i, block in enumerate(conserved_blocks):
+            print(f"Dataset {dataset}: Conserved block {i + 1} '{block}' inserted at position {insert_positions[i]}")
 
-    # Saves the dataset
-    fasta_filename = f'test{dataset}.fasta'
-    fasta_filename = os.path.join(FASTA_OUTPUT, fasta_filename)
-    write_fasta_file(fasta_filename, sequences)
-    fasta_files.append(fasta_filename)
-    print(f"Fasta file created in {fasta_filename} with score {score}")
+        # Salva il dataset in formato FASTA
+        fasta_filename = f'test{dataset}.fasta'
+        fasta_filename = os.path.join(FASTA_OUTPUT, fasta_filename)
+        write_fasta_file(fasta_filename, sequences)
+        fasta_files.append(fasta_filename)
+        print(f"Fasta file created in {fasta_filename} with score {score}")
 
-write_dataset_dpamsa(fasta_files, FILE_NAME_SCRIPT_OUTPUT)
-print(f"Dataset file created in {FILE_NAME_SCRIPT_OUTPUT}")
+    # Crea il file Python strutturato per i dataset
+    write_dataset_dpamsa(fasta_files, FILE_NAME_SCRIPT_OUTPUT)
+    print(f"Dataset file created in {FILE_NAME_SCRIPT_OUTPUT}")
