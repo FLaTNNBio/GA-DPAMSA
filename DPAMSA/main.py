@@ -1,4 +1,5 @@
 import datasets.training_dataset.synthetic_dataset_4x101bp as dataset1
+import utils
 from DPAMSA.env import Environment
 from DPAMSA.dqn import DQN
 import config
@@ -11,7 +12,7 @@ dataset = dataset1
 
 
 def main():
-    config.device = torch.device(config.device_name)
+    config.DEVICE = torch.device(config.DEVICE_NAME)
     multi_train(dataset, truncate_file=True)
 
 
@@ -20,16 +21,16 @@ def output_parameters():
     print("Gap penalty: {}".format(config.GAP_PENALTY))
     print("Mismatch penalty: {}".format(config.MISMATCH_PENALTY))
     print("Match reward: {}".format(config.MATCH_REWARD))
-    print("Episode: {}".format(config.max_episode))
-    print("Batch size: {}".format(config.batch_size))
-    print("Replay memory size: {}".format(config.replay_memory_size))
-    print("Alpha: {}".format(config.alpha))
-    print("Epsilon: {}".format(config.epsilon))
-    print("Gamma: {}".format(config.gamma))
-    print("Delta: {}".format(config.delta))
-    print("Decrement iteration: {}".format(config.decrement_iteration))
-    print("Update iteration: {}".format(config.update_iteration))
-    print("Device: {}".format(config.device_name))
+    print("Episode: {}".format(config.MAX_EPISODE))
+    print("Batch size: {}".format(config.BATCH_SIZE))
+    print("Replay memory size: {}".format(config.REPLAY_MEMORY_SIZE))
+    print("Alpha: {}".format(config.ALPHA))
+    print("Epsilon: {}".format(config.EPSILON))
+    print("Gamma: {}".format(config.GAMMA))
+    print("Delta: {}".format(config.DELTA))
+    print("Decrement iteration: {}".format(config.DECREMENT_ITERATION))
+    print("Update iteration: {}".format(config.UPDATE_ITERATION))
+    print("Device: {}".format(config.DEVICE_NAME))
     print('\n')
 
 
@@ -38,8 +39,8 @@ def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_pat
     output_parameters()
 
     tag = os.path.splitext(dataset.file_name)[0]
-    report_file_name = os.path.join(config.report_path_DPAMSA, f"{tag}.rpt")
-    csv_file_name = os.path.join(config.csv_path, f"{tag}.csv")
+    report_file_name = os.path.join(utils.DPAMSA_REPORTS_PATH, f"{tag}.rpt")
+    csv_file_name = os.path.join(utils.CSV_PATH, "DPAMSA_training", f"{tag}.csv")
 
     if truncate_file:
         with open(report_file_name, 'w'):
@@ -62,7 +63,7 @@ def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_pat
 
         env = Environment(seqs)
         agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
-        p = tqdm(range(config.max_episode))
+        p = tqdm(range(config.MAX_EPISODE))
         p.set_description(name)
 
         try:
@@ -118,8 +119,8 @@ def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_pat
             writer.writerow([name, alignment_length, num_sequences, sp_score, exact_matches, column_score])
 
     print(f"\nOperazione completata con successo.")
-    print(f"Il file di report è stato salvato in: {config.report_path_DPAMSA}")
-    print(f"Il file CSV è stato salvato in: {config.csv_path}")
+    print(f"Il file di report è stato salvato in: {utils.DPAMSA_REPORTS_PATH}")
+    print(f"Il file CSV è stato salvato in: {utils.CSV_PATH}")
 
 
 def train(index):
@@ -132,7 +133,7 @@ def train(index):
 
     env = Environment(data)
     agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
-    p = tqdm(range(config.max_episode))
+    p = tqdm(range(config.MAX_EPISODE))
 
     for _ in p:
         state = env.reset()
@@ -170,8 +171,8 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
     output_parameters()
 
     tag = os.path.splitext(dataset.file_name)[0]
-    report_file_name = os.path.join(config.report_path_DPAMSA, f"{tag}.rpt")
-    csv_file_name = os.path.join(config.csv_path, f"{tag}.csv")
+    report_file_name = os.path.join(utils.DPAMSA_REPORTS_PATH, f"{tag}.rpt")
+    csv_file_name = os.path.join(utils.INFERENCE_CSV_PATH, "DPAMSA", f"{tag}.csv")
 
     if truncate_file:
         with open(report_file_name, 'w'):
@@ -207,32 +208,31 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
 
         env.padding()
 
-        alignment_length = len(env.aligned[0])
-        sp_score = env.calc_score()
-        exact_matches = env.calc_exact_matched()
-        column_score = exact_matches / alignment_length
-        num_sequences = len(env.aligned)
+        metrics = utils.calculate_metrics(env)
 
+        # Crea il report testuale
         report = (
             f"#: {name}\n"
-            f"AL: {alignment_length}\n"
-            f"QTY: {num_sequences}\n"
-            f"SP: {sp_score}\n"
-            f"EM: {exact_matches}\n"
-            f"CS: {column_score}\n"
+            f"AL: {metrics['AL']}\n"
+            f"QTY: {metrics['QTY']}\n"
+            f"SP: {metrics['SP']}\n"
+            f"EM: {metrics['EM']}\n"
+            f"CS: {metrics['CS']}\n"
             f"Alignment:\n{env.get_alignment()}\n\n"
         )
 
+        # Scrive il report nel file .rpt
         with open(report_file_name, 'a') as report_file:
             report_file.write(report)
 
+        # Scrive i dati nel file CSV
         with open(csv_file_name, 'a', newline='') as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow([name, alignment_length, num_sequences, sp_score, exact_matches, column_score])
+            writer.writerow([name, metrics['AL'], metrics['QTY'], metrics['SP'], metrics['EM'], metrics['CS']])
 
     print(f"\nOperazione completata con successo.")
-    print(f"Il file di report è stato salvato in: {config.report_path_DPAMSA}")
-    print(f"Il file CSV è stato salvato in: {config.csv_path}")
+    print(f"Il file di report è stato salvato in: {utils.DPAMSA_REPORTS_PATH}")
+    print(f"Il file CSV è stato salvato in: {utils.CSV_PATH}")
 
 
 if __name__ == "__main__":

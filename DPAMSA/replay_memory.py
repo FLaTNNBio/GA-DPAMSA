@@ -5,7 +5,7 @@ import random
 class ReplayMemory:
     def __init__(self):
         self.storage = []
-        self.max_size = config.replay_memory_size
+        self.max_size = config.REPLAY_MEMORY_SIZE
         self.size = 0
         self.ptr = 0
         self.previous_hash = None

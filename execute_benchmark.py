@@ -118,7 +118,7 @@ for file in tqdm(files, desc="Calculating Benchmarks"):
 ga_inference(dataset=dataset1, model_path='model_3x30', truncate_file=True)
 
 # **Leggi il CSV generato da GA-DPAMSA**
-ga_csv_path = os.path.join(config.csv_path, f"{dataset_name}.csv")
+ga_csv_path = os.path.join(utils.CSV_PATH, f"{dataset_name}.csv")
 ga_data = pd.read_csv(ga_csv_path)
 
 # **Aggiungi la colonna SP Score di GA-DPAMSA ai dati esistenti**
@@ -132,7 +132,7 @@ else:
     print("Errore: Il numero di risultati GA-DPAMSA non corrisponde al numero di file processati.")
 
 # Salva i risultati delle SP per ogni file
-with open(f'{config.csv_path}/{dataset_name}_tools_sp_score.csv', mode='w', newline='') as file_csv:
+with open(f'{utils.CSV_PATH}/{dataset_name}_tools_sp_score.csv', mode='w', newline='') as file_csv:
     writer = csv.writer(file_csv)
     writer.writerow([
         "File name",
@@ -158,7 +158,7 @@ average_sp_upp = sum(sp_upp_values) / len(sp_upp_values)
 average_sp_ga_dpamsa = sum(ga_sp_scores) / len(ga_sp_scores)
 
 # Salva i risultati medi in un altro file CSV
-with open(f'{config.csv_path}/{dataset_name}_tools_average_sp.csv', mode='w', newline='') as avg_csv:
+with open(f'{utils.CSV_PATH}/{dataset_name}_tools_average_sp.csv', mode='w', newline='') as avg_csv:
     writer = csv.writer(avg_csv)
     writer.writerow(["Tool", "Average SP"])
     writer.writerow(["ClustalOmega", average_sp_clustalo])
@@ -195,7 +195,7 @@ import matplotlib.colors as mcolors
 import seaborn as sns
 
 # Carica i dati dal file CSV
-data = pd.read_csv(f'{config.csv_path}/{dataset_name}_tools_sp_score.csv')
+data = pd.read_csv(f'{utils.CSV_PATH}/{dataset_name}_tools_sp_score.csv')
 
 # Riorganizza i dati in formato "long" per facilitare la visualizzazione con seaborn
 data_long = pd.melt(data, id_vars=["File name"],
@@ -239,7 +239,7 @@ for i, line in enumerate(box_plot.lines):
 plt.title('Distribuzione degli SP Scores per ogni Tool')
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(f'{config.charts_path}/{dataset_name}_boxplot.png')  # Salva il grafico come immagine
+plt.savefig(f'{utils.CHARTS_PATH}/{dataset_name}_boxplot.png')  # Salva il grafico come immagine
 plt.show()
 
 ### BarPlot per i valori medi di SP score ###
@@ -256,5 +256,5 @@ for index, row in mean_sp_scores.iterrows():
 plt.title('Valori Medi degli SP Scores per ogni Tool')
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(f'{config.charts_path}/{dataset_name}_barplot.png')  # Salva il grafico come immagine
+plt.savefig(f'{utils.CHARTS_PATH}/{dataset_name}_barplot.png')  # Salva il grafico come immagine
 plt.show()

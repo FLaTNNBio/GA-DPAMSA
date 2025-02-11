@@ -3,6 +3,8 @@ import os
 import config
 from tqdm import tqdm
 
+import utils
+
 # Configuration parameters
 num_sequences = 3
 sequence_length = 30
@@ -15,8 +17,8 @@ DATASET_NAME = 'synthetic_dataset_3x30bp'
 # Number and lengths of conserved blocks
 conserved_block_sizes = [5]  # List of conserved block lengths
 
-FILE_NAME_SCRIPT_OUTPUT = f'{config.training_dataset_path}/{DATASET_NAME}.py'
-FASTA_OUTPUT = f'{config.fasta_files_path}/{DATASET_NAME}'
+FILE_NAME_SCRIPT_OUTPUT = f'{utils.TRAINING_DATASET_PATH}/{DATASET_NAME}.py'
+FASTA_OUTPUT = f'{utils.FASTA_FILES_PATH}/{DATASET_NAME}'
 
 if not os.path.exists(FASTA_OUTPUT):
     os.makedirs(FASTA_OUTPUT)

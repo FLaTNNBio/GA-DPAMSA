@@ -1,4 +1,6 @@
 import datasets.inference_dataset.dataset1_3x30bp as dataset1
+import utils
+from DPAMSA.env import Environment
 from GA import GA
 import config
 import csv
@@ -14,16 +16,16 @@ def output_parameters():
     print("Gap penalty: {}".format(config.GAP_PENALTY))
     print("Mismatch penalty: {}".format(config.MISMATCH_PENALTY))
     print("Match reward: {}".format(config.MATCH_REWARD))
-    print("Episode: {}".format(config.max_episode))
-    print("Batch size: {}".format(config.batch_size))
-    print("Replay memory size: {}".format(config.replay_memory_size))
-    print("Alpha: {}".format(config.alpha))
-    print("Epsilon: {}".format(config.epsilon))
-    print("Gamma: {}".format(config.gamma))
-    print("Delta: {}".format(config.delta))
-    print("Decrement iteration: {}".format(config.decrement_iteration))
-    print("Update iteration: {}".format(config.update_iteration))
-    print("Device: {}".format(config.device_name))
+    print("Episode: {}".format(config.MAX_EPISODE))
+    print("Batch size: {}".format(config.BATCH_SIZE))
+    print("Replay memory size: {}".format(config.REPLAY_MEMORY_SIZE))
+    print("Alpha: {}".format(config.ALPHA))
+    print("Epsilon: {}".format(config.EPSILON))
+    print("Gamma: {}".format(config.GAMMA))
+    print("Delta: {}".format(config.DELTA))
+    print("Decrement iteration: {}".format(config.DECREMENT_ITERATION))
+    print("Update iteration: {}".format(config.UPDATE_ITERATION))
+    print("Device: {}".format(config.DEVICE_NAME))
     print("-------- Genetic Algorithm parameters ---------")
     print(f"Window size:{config.AGENT_WINDOW_ROW}x{config.AGENT_WINDOW_COLUMN}")
     print(f"Population number: {config.GA_POPULATION_SIZE}")
@@ -37,17 +39,16 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
     output_parameters()
 
     tag = os.path.splitext(dataset.file_name)[0]
-    report_file_name = os.path.join(config.report_path_GA_DPAMSA, f"{tag}.rpt")
-    csv_file_name = os.path.join(config.csv_path, f"{tag}.csv")
+    report_file_name = os.path.join(utils.GA_DPAMSA_REPORTS_PATH, f"{tag}.rpt")
+    csv_file_name = os.path.join(utils.INFERENCE_CSV_PATH, "GA-DPAMSA", f"{tag}.csv")
 
     if truncate_file:
         with open(report_file_name, 'w'):
             pass
         with open(csv_file_name, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
-            # writer.writerow(["Dataset Name", "Number of Sequences", "Alignment Length", "SP Score", "Exact Matches",
-            #                 "Column Score"])
-            writer.writerow(["Dataset Name", "SP Score"])
+            writer.writerow(["Dataset Name", "Number of Sequences", "Alignment Length", "SP Score", "Exact Matches",
+                             "Column Score"])
 
     datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
 
@@ -57,6 +58,7 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
             continue
         seqs = getattr(dataset, dataset_name)
 
+        env = Environment(seqs, convert_data=False)
         ga = GA(seqs)
         ga.generate_population()
 
@@ -90,25 +92,37 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
             #ga.vertical_crossover()
         #In the last iteration, we have to perform again the calculation (last operation is the crossover, so we need to recheck the score)
         ga.calculate_fitness_score()
-        most_fitted_chromosome,sum_pairs_score = ga.get_most_fitted_chromosome()
-        most_fitted_chromosome_converted = ga.get_alignment(most_fitted_chromosome)
 
+        most_fitted_chromosome = ga.get_most_fitted_chromosome()
+        aligned_seqs = ga.get_nucleotides_seqs(most_fitted_chromosome)
+
+        Environment.set_alignment(env, aligned_seqs)
+        metrics = utils.calculate_metrics(env)
+
+        # Crea il report testuale
         report = (
             f"#: {dataset_name}\n"
-            f"SP: {sum_pairs_score}\n"
-            f"Alignment:\n{most_fitted_chromosome_converted}\n\n"
+            f"AL: {metrics['AL']}\n"
+            f"QTY: {metrics['QTY']}\n"
+            f"SP: {metrics['SP']}\n"
+            f"EM: {metrics['EM']}\n"
+            f"CS: {metrics['CS']}\n"
+            f"Alignment:\n{env.get_alignment()}\n\n"
         )
 
+        # Scrive il report nel file .rpt
         with open(report_file_name, 'a') as report_file:
             report_file.write(report)
 
+        # Scrive i dati nel file CSV
         with open(csv_file_name, 'a', newline='') as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow([dataset_name, sum_pairs_score])
+            writer.writerow([dataset_name, metrics['AL'], metrics['QTY'], metrics['SP'], metrics['EM'], metrics['CS']])
+
 
     print(f"\nOperazione completata con successo.")
-    print(f"Il file di report è stato salvato in: {config.report_path_GA_DPAMSA}")
-    print(f"Il file CSV è stato salvato in: {config.csv_path}")
+    print(f"Il file di report è stato salvato in: {utils.GA_DPAMSA_REPORTS_PATH}")
+    print(f"Il file CSV è stato salvato in: {utils.CSV_PATH}")
 
 
 if __name__ == "__main__":

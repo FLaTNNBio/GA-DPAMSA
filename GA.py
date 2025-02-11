@@ -72,8 +72,9 @@ class GA:
         most_fitted_individual = self.population[population_score_sorted[0][0]]     
         #Clean all gaps that appear after the last nucleotide (if along the whole row and all columns there are only gaps)
         utils.clean_unnecessary_gaps(most_fitted_individual)
-        final_score = utils.get_sum_of_pairs(most_fitted_individual,0,len(most_fitted_individual),0,len(most_fitted_individual[0]))
-        return most_fitted_individual,final_score
+        # final_score = utils.get_sum_of_pairs(most_fitted_individual,0,len(most_fitted_individual),0,len(most_fitted_individual[0]))
+        # return most_fitted_individual,final_score
+        return most_fitted_individual
 
     def vertical_crossover(self):
         #Calculation of the mean length of a sequences, to calculate the position in which we cut every sequence in a chromosome
@@ -271,3 +272,13 @@ class GA:
                     #if(index < len(genes_to_mutate) - 1): #This is necessary due to the row with all GAP added in case the number of row for the window is not multiple of the main board rows
                     genes_to_mutate[index][from_column:to_column] = sequence
             individual_to_mutate[from_row:to_row] = genes_to_mutate
+
+    def get_nucleotides_seqs(self, chromosome):
+
+        nucleotides_seqs = []
+        for sequence in chromosome:
+            # Converti ogni numero nel corrispondente nucleotide
+            nucleotide_sequence = ''.join([nucleotides[n - 1] for n in sequence])
+            nucleotides_seqs.append(nucleotide_sequence)
+
+        return nucleotides_seqs
