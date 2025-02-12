@@ -2,14 +2,14 @@ import os
 from tqdm import tqdm
 import config
 import utils
-import datasets.inference_dataset.synthetic_dataset_6x30bp as inference_dataset
+import datasets.inference_dataset.encode_project_dataset_4x101bp_2 as inference_dataset
 
 # MAKE SURE THE DATASET NAME MATCHES THE IMPORTED DATASET
-DATASET_NAME = 'synthetic_dataset_6x30bp'
+DATASET_NAME = 'encode_project_dataset_4x101bp'
 
 # MAKE SURE TO CHANGE 'DATASET_ROW' AND 'DATASET_COLUMN' IN THE CONFIG FILE TO MATCH DATASET SIZES
 # MAKE SURE DPAMSA MODEL MATCHES DATASET SIZES
-DPAMSA_MODEL = 'model_6x30'
+DPAMSA_MODEL = 'model_3x30'
 
 # MAKE SURE 'AGENT_WINDOW_ROW' AND 'AGENT_WINDOW_COLUMN' MATCH GA_DPAMSA MODEL
 GA_DPAMSA_MODEL = 'model_3x30'
