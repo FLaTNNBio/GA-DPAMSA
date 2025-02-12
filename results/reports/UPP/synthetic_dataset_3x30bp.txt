@@ -1,0 +1,550 @@
+File: test0.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 32
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GTGGTCCAGGGCTGTTCCGTAACGCGAGCA
+GCGCTCCTTACGGGTTCCCGAACCCA-GGA
+GCAGTTATTGGCGGTTCCCCACCTCATTGA
+
+File: test1.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -24
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+-AAAGAAGACGTCCAAAAGACTACTCAGC-
+CAAGAAGCGGTTCCACAACAGTAGTGGGC-
+TAAGAAGAGAAACCGGACCGCCAGACAGCC
+
+File: test10.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 32
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TGGATTTGCACCGTATGCCCGGGACGTTGA
+AAG-TCCGAACCGGTCTGCCGGGACTCTTA
+TAT-TTGACACGGGCCAGCCGGGACGATGG
+
+File: test11.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GATAAGACCGCCAGAAAACAGGAGTTAAA-
+GACCAGTCCTCTATAATAAAGGAGCCCAC-
+GATTCGGGCTCCATAGAAAAAGGAGCCGCA
+
+File: test12.fasta
+Alignment Length (AL): 35
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -124
+Exact Matches (EM): 8
+Column Score (CS): 0.229
+Alignment:
+ATCCCACGACGTAAGTCGTATTCGTCAG------C
+GTTAC-CACCCTGAAGCCTCATGGTCAG------T
+A-----CACCCGGCACGATTGTAATCAGCGTCAGT
+
+File: test13.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CAGCGCAACACCTCTTTATGTCCACCAAGG
+CAGCGTACGATTCCTCCATTCTAAGCCCGC
+CAGCGGTCCACTGTTTAATTGCCATACCGG
+
+File: test14.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 32
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+AAGGCGGGGTAGCCCACCCACTCACCACAG
+AGCCCA-GGCATTCCTGGTGCGGACCACAG
+AGAGCATGGAATTCATTATGGGGAACACAG
+
+File: test15.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -24
+Exact Matches (EM): 8
+Column Score (CS): 0.267
+Alignment:
+GAGATCAAAGCGGATCTCAGGCGGCCC-CG
+GCT-GCCAAAGCGGGTTAAGGCGTCACAGG
+GCG-TAGAAAGCGGTCACATATGTCTCAAA
+
+File: test16.fasta
+Alignment Length (AL): 33
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -68
+Exact Matches (EM): 9
+Column Score (CS): 0.273
+Alignment:
+-----ATGATACGATCCGTACTTGTCATGGGGT
+ACGATACGCTGTAACCCGTCATTATGGCG----
+ACGATACGGTCGAAGCCGTTCCGATGGAC---C
+
+File: test17.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+-GATCTCCGTACAATTATTTCTAATGACCA
+TACTTGCCGGCTAAATATTTATATCGGATG
+AAAGCTCCTTTTGTATATTTCTATTGGTCA
+
+File: test18.fasta
+Alignment Length (AL): 29
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 12
+Exact Matches (EM): 11
+Column Score (CS): 0.379
+Alignment:
+GACGGTACAACTATTGGCATGGAGCCCGA
+GGAACTAC--TCATTACGTGCCGGCCCGA
+GAAGGTACA-TGGATGACGGATGGCCCGA
+
+File: test19.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 8
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+GTAAAAAGCTCCGGGGCTGCTACG---AGA
+TTAAAAAACCCTGGCACCGTTTTG-TTTCG
+TTAAAAAGAGCTGGAACGTTTGCGCTTGTT
+
+File: test2.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 48
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TAAGAGACTGATGCCCAGGATGGTCACCG-
+TAAGAGACGGTTGCCTGCGAGGTTTAGCG-
+TAAGAGACTGTATTACCTTATGTGCGCCCC
+
+File: test20.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 64
+Exact Matches (EM): 14
+Column Score (CS): 0.467
+Alignment:
+CTGAGGA-AACACCTGAAATATGGCTTTTA
+CAGACGATCACACCTGAATTGTGCCGTTAG
+CAGAATATCGCACCTGAATTTACTGTTCCT
+
+File: test21.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CAACCCTAGATGCTTTTGAACAGCAAACT-
+-GAACCACGCAGCTCATAGCCAGCAACGA-
+GGATCGCTGCCGGTCTAGGCCAGCAAGGAC
+
+File: test22.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 24
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+TCGC-AAAATTCGTGAACATCTGGAGGCAT
+TCGCTAAAATTGCCGCAGACCTGGAAGTCG
+ACC--GTCAATGACCCACATCTGGAAATAT
+
+File: test23.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 24
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+AC-ATATGCAACTCAATAGTACTTG-TAAA
+TCCTTATGCGCCCAAACTTTACAAATTTTA
+TCTCTATGCGAATGAACTATCCAGACTATA
+
+File: test24.fasta
+Alignment Length (AL): 32
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -8
+Exact Matches (EM): 12
+Column Score (CS): 0.375
+Alignment:
+TTCGTCCCGGAAGACTCAGAGTAGTGACG---
+TTCGT--CGGGCAGCCTACAACGGCGGAGTCA
+TTCGTCGCGATAGACAAACGCGGGTGACG---
+
+File: test25.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+CTGACTCGTGGC-CAGAATCCTCTCACCCA
+CACACGGGGAGCTTAAGGGGATCTCATCCA
+CAGTTGGGGTGGCAAACATTCTCTCACCAC
+
+File: test26.fasta
+Alignment Length (AL): 39
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -156
+Exact Matches (EM): 10
+Column Score (CS): 0.256
+Alignment:
+----------ACGTTATTCGAAGTTTGTTCTTATGGATC
+----------ACGAAATTCGATTGTGTACCAGAAAGTTG
+ACGAACTTCGACGTTGTTCGACA-----------GGTTC
+
+File: test27.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 48
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TTGGCCCAATGTTAA-AACTCACACCAACA
+TAGGCAGTTTGTTAACAGGGACTACCAATG
+AAAGCGGTACGTAAA-AAAGACCACCAACG
+
+File: test28.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 0
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+CTATGCTGAGGAGTTCTGCTGCTTTCGTCA
+C-AACGACCTGAGTTCTGACCGGTGCGCTG
+C-GTGCTCAGTAGTTCTCCTCTGTACATCG
+
+File: test29.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 24
+Exact Matches (EM): 13
+Column Score (CS): 0.433
+Alignment:
+ATTATTCTAAATGCGAGTAGGCTAACATTT
+CTTCAGCACAATGCGAGTAATGTGTCCTGA
+GCTCTCCAGTAGGCGAGTATTTTGTCTTCC
+
+File: test3.fasta
+Alignment Length (AL): 37
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -188
+Exact Matches (EM): 5
+Column Score (CS): 0.135
+Alignment:
+-------CTATTGATAGCATATCGATACTACATCGC-
+-------GGCTTGTTGGCGTGACGATTCACCATCGCG
+ATATTATCCATTAGTTAGCCATCGCG-----------
+
+File: test30.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+ACCCGTCCGCCCTCTAAGGCCGCTTATGAA
+GTCCGTCAGTACTTTTGCCACACGTAGGCA
+GCCCGTCCCCG-ATGGGCAACGCGTAGCTA
+
+File: test31.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 32
+Exact Matches (EM): 13
+Column Score (CS): 0.433
+Alignment:
+-ACAACATGATAGTTCCAAATAGACTTCTC
+-GGACCTTGACCATTCCAACTCGACAA-GG
+AGTAACATGAGGTTTCCAAACAGAGATTAG
+
+File: test32.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 24
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TCCGTCAACGGGGGGCTTGAGCAGGAGTTG
+TTAGAGAGGCAGGGGCATGGTCACTTCTTC
+TCAGAGGAAGAGGGGCATGCACACAATTCT
+
+File: test33.fasta
+Alignment Length (AL): 45
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -244
+Exact Matches (EM): 7
+Column Score (CS): 0.156
+Alignment:
+GG-----------------GGTTGGCCGTACTCTGTTTAGCGCTA
+GAAAGTGCTTAGAACTCT-GGTTGACCGTA---------------
+GGACATGCCGACTACTCTTATTTGGCCCGA---------------
+
+File: test34.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+G-AAGATAGGGTCCCCAGACTTTGAAG--G
+GCGATATCGGGCGACCAGAGAAGTCGGAAG
+G--GGAAGTGGAACCCAGACTTATAGGACG
+
+File: test35.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+AGCAGAAGAAGTCTTCAAAAGTAAGGGGGG
+CGCAGATGATTTAATCAGGAGTAACACTTG
+AGCGGCTTTTTTCACGGAAAGTAAGGTTGA
+
+File: test36.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+CCCA--ATAGTCCACTCCAAACTTTAACCA
+CCGGTGGAGGTTCGGACCAAAATTATCCCA
+CTTATGCAAGTTGGTACCAAAATATAACGT
+
+File: test37.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 24
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GAAGGCCCATCACCAAACAGAACTGGGGGG
+TGGGGCCCATCCGCGCGTAGAACTGGACCA
+CGACCGCCATCTCCG-GCTGAACAAGGCAA
+
+File: test38.fasta
+Alignment Length (AL): 31
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 28
+Exact Matches (EM): 12
+Column Score (CS): 0.387
+Alignment:
+TTTGGATACAACG---GCCTCTGCCTGTCCT
+ACTGGGTACGATCCG-GTCTCTGCCTGTATA
+A--GAGTATTTTTTGTGCCCCTGCCTTTCCT
+
+File: test39.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CACCGACCACCTGGGAACCGCCGACCCTGC
+AGCCGACCCGCTCCGCACCGTGGAGCTGGC
+CCCCGACCTGCGGGTGACGGTCCAAATCTA
+
+File: test4.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CAGACTTACTAACCGTGGAGAAAGGACATT
+ATAATCTTAAAACCATGCAAAAAGGACTCT
+GGTGCGGTCAACTTATGTAAAAAGGACTTC
+
+File: test40.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 8
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+TAGCCAGAATCCATCCCAAGGTGCC-GCGT
+ACGACAAATAGAACGCCTACTATTCCGCGT
+-AGCCCTGTTTGATCCCTACGCATCCGCGT
+
+File: test41.fasta
+Alignment Length (AL): 32
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 16
+Exact Matches (EM): 13
+Column Score (CS): 0.406
+Alignment:
+G--TTTTATAGCGCTCGGACGTATCACGTCAG
+GCATTATACAGACTAC---CGTGTCA-GACGA
+GCATTATATAGCATCCAGGCATCCC--GGCTG
+
+File: test42.fasta
+Alignment Length (AL): 37
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -180
+Exact Matches (EM): 7
+Column Score (CS): 0.189
+Alignment:
+AAT-GTGATATTGTCTGGCATAGGGAGG-------AT
+-----------TGCCTCGCTTGGACTGGCAATGGAGT
+ACCCACAGCGGCGTCTGGCAAATGGCGG-------GG
+
+File: test43.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -40
+Exact Matches (EM): 8
+Column Score (CS): 0.267
+Alignment:
+GTTCATTCAGCGCCACACAAGTCCGATAGA
+ATC--TTTCGTGCATGACATTTCCGATAAC
+ACA--TCATACAGCATCATATTCCGATAGA
+
+File: test44.fasta
+Alignment Length (AL): 29
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 44
+Exact Matches (EM): 12
+Column Score (CS): 0.414
+Alignment:
+GTCATTCGTTTTAATAACTCTGGATAGGC
+GCGTGGCACTGTTATAACGGTGCACTGGG
+CGCAAGCGCTGTCATAACGAGGGATAGGC
+
+File: test45.fasta
+Alignment Length (AL): 32
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -80
+Exact Matches (EM): 8
+Column Score (CS): 0.250
+Alignment:
+ATGACAACTATACAGCAGATGCATTTTC---T
+AG-ACCACCTCCCAGCTGTTGCATTCAG---T
+---GCAACGCTGTAACGGCAGAGCATTCAGAT
+
+File: test46.fasta
+Alignment Length (AL): 33
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -108
+Exact Matches (EM): 6
+Column Score (CS): 0.182
+Alignment:
+AAGCCTCTCTCACGCACGGGCAGGAGCG----C
+GCGCCTCTTTC-TGAACGGTTGTGGATC----C
+A---GCCTCTT-CGAATCGCGGGATGTCGCTTG
+
+File: test47.fasta
+Alignment Length (AL): 29
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -44
+Exact Matches (EM): 8
+Column Score (CS): 0.276
+Alignment:
+CCCGATTTACTGGCAGAGGCGTGGTTCA-
+--CAGATGTTTTCTGGGGGCGTGCTCCGG
+CACGATGTAATGAACATGGCGTGGACAGA
+
+File: test48.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 48
+Exact Matches (EM): 13
+Column Score (CS): 0.433
+Alignment:
+CCTAAGTGG-GACAATGGT-GCCGTACGCC
+CGTAACTAAAGATAATGGTTGACGACCGTA
+CCCAAGTAAACGTAATGGCGGGGGATCGGG
+
+File: test49.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): -16
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+CCTGTACAGCCTGTGATTCTGTCCCA--CT
+CGCGTTCCGCCTGTGATTTTGACAGATCCT
+--TAATTCAGCCGTGATAATAGTCCAAGGT
+
+File: test5.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 48
+Exact Matches (EM): 13
+Column Score (CS): 0.433
+Alignment:
+GTAATTCACTAATCATGGCATAGATCACTA
+TTACTAAGTTATACAGGGCATCGAGCG-TA
+CTACTA-ATTGGTTAGGGCATAAAACCCTT
+
+File: test6.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+G-AATGGTTGCTATAGGGGATTCACAAAGC
+CCCGTGAAAGCTCTCCGAGATTCAATACCC
+TCGATGAAGGCTTTCCCGAATTCA-CGAAG
+
+File: test7.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 32
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+CTTCGCGCGCTGGCATGACGAAGGACAAAC
+ATTAGAAC-GTGGGACAAATGAGGACCAGA
+TTAGGTGCGGGGGGAGGTAGAAGGACGAAA
+
+File: test8.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 40
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+GGGTCACCATGCAGCATGACATACAACTAG
+GGCTGGACAGTCGGAATGACACAAACCGTT
+TGCCCGATACTCTGAATGACGGAAAACGAC
+
+File: test9.fasta
+Alignment Length (AL): 30
+Number of Sequences (QTY): 3
+Sum of Pairs (SP): 32
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GCTCGTAGGCCTATGGTACGTCAACGCGCT
+CCACTCTGACCCTTGATGTGTCAAGTCCCT
+GCTGGCAGACATACTGTTAGTCAACGTTCT
+

@@ -1,0 +1,6 @@
+>sequence1
+GG----------------GGTTGGCCGTACTCTGTTTAGCGCTA
+>sequence3
+GGACATGCCGACTACTCTTATT--------------TGGCCCGA
+>sequence2
+GAAAGTGCTTAGAACTCTGGTTGACCGT---------------A
