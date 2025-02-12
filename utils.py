@@ -1,105 +1,21 @@
 import config
-import pandas as pd
+import glob
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 import random
 import seaborn as sns
 import subprocess
+from tqdm import tqdm
 from DPAMSA.env import Environment
+from config import CSV_PATH, INFERENCE_CSV_PATH, CHARTS_PATH, TOOLS, GA_DPAMSA_INF_CSV_PATH, DPAMSA_INF_CSV_PATH
 from mainGA import inference as ga_inference
 from DPAMSA.main import inference as dpamsa_inference
-
-
-# ---------
-# CONSTANTS
-# ---------
-
-# PATHS
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-
-BASE_DATASETS_PATH = os.path.join(PROJECT_ROOT, "datasets")
-FASTA_FILES_PATH = os.path.join(BASE_DATASETS_PATH, "fasta_files")
-TRAINING_DATASET_PATH = os.path.join(BASE_DATASETS_PATH, "training_dataset")
-INFERENCE_DATASET_PATH = os.path.join(BASE_DATASETS_PATH, "inference_dataset")
-
-DPAMSA_WEIGHTS_PATH = os.path.join(PROJECT_ROOT, "DPAMSA", "weights")
-
-BASE_RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
-REPORTS_PATH = os.path.join(BASE_RESULTS_PATH, "reports")
-DPAMSA_REPORTS_PATH = os.path.join(REPORTS_PATH, "DPAMSA")
-GA_DPAMSA_REPORTS_PATH = os.path.join(REPORTS_PATH, "GA-DPAMSA")
-BENCHMARKS_PATH = os.path.join(BASE_RESULTS_PATH, "benchmarks")
-TOOLS_OUTPUT_PATH = os.path.join(BASE_RESULTS_PATH, "tools_output")
-CSV_PATH = os.path.join(BENCHMARKS_PATH, "csv")
-INFERENCE_CSV_PATH = os.path.join(CSV_PATH, "inference")
-CHARTS_PATH = os.path.join(BENCHMARKS_PATH, "charts")
-
-
-# Ensure directories exist, creating them if they don't
-REQUIRED_DIRECTORIES = [
-    DPAMSA_WEIGHTS_PATH,
-    BASE_RESULTS_PATH,
-    DPAMSA_REPORTS_PATH,
-    GA_DPAMSA_REPORTS_PATH,
-    BENCHMARKS_PATH,
-    TOOLS_OUTPUT_PATH,
-    CSV_PATH,
-    INFERENCE_CSV_PATH,
-    CHARTS_PATH
-]
-for path in REQUIRED_DIRECTORIES:
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
-# TOOLS
-TOOLS = {
-    'ClustalOmega': {
-        'command': lambda file_path: ['clustalo', '-i', file_path],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'ClustalOmega'),
-        'report_dir': os.path.join(REPORTS_PATH, 'ClustalOmega')
-    },
-    'MSAProbs': {
-        'command': lambda file_path: ['msaprobs', file_path],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'MSAProbs'),
-        'report_dir': os.path.join(REPORTS_PATH, 'MSAProbs')
-    },
-    'ClustalW': {
-        'command': lambda file_path: ['clustalw', file_path, '-OUTPUT=FASTA',
-                                      f'-OUTFILE={os.path.join(TOOLS_OUTPUT_PATH, "ClustalW", os.path.basename(file_path))}'],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'ClustalW'),
-        'report_dir': os.path.join(REPORTS_PATH, 'ClustalW')
-    },
-    'MAFFT': {
-        'command': lambda file_path: ['mafft', '--auto', file_path],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'MAFFT'),
-        'report_dir': os.path.join(REPORTS_PATH, 'MAFFT')
-    },
-    'MUSCLE5': {
-        'command': lambda file_path: ['muscle5', '-align', file_path, '-output',
-                                      os.path.join(TOOLS_OUTPUT_PATH, 'MUSCLE5', os.path.basename(file_path))],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'MUSCLE5'),
-        'report_dir': os.path.join(REPORTS_PATH, 'MUSCLE5')
-    },
-    'UPP': {
-        'command': lambda file_path: ['run_upp.py', '-s', file_path, '-m', 'dna', '-d',
-                                      os.path.join(TOOLS_OUTPUT_PATH, 'UPP', f"{os.path.basename(file_path)}_output")],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'UPP'),
-        'report_dir': os.path.join(REPORTS_PATH, 'UPP')
-    },
-    'PASTA': {
-        'command': lambda file_path: ['run_pasta.py', '-i', file_path, '-o',
-                                      os.path.join(TOOLS_OUTPUT_PATH, 'PASTA', f"{os.path.basename(file_path)}_output")],
-        'output_dir': os.path.join(TOOLS_OUTPUT_PATH, 'PASTA'),
-        'report_dir': os.path.join(REPORTS_PATH, 'PASTA')
-    }
-}
 
 
 # --------
 # GA UTILS
 # --------
-
 def is_overlap(range1, range2):
     from_row1, to_row1, from_column1, to_column1 = range1
     from_row2, to_row2, from_column2, to_column2 = range2
@@ -277,23 +193,55 @@ def parse_fasta_to_sequences(fasta_content):
     return sequences
 
 
+def display_menu():
+
+    print("Seleziona l'opzione per il benchmarking:")
+    print("1. GA-DPAMSA vs DPAMSA")
+    print("2. GA-DPAMSA vs Tools")
+    print("3. GA-DPAMSA vs DPAMSA vs Tools")
+
+    while True:
+        try:
+            choice = int(input("Inserisci il numero della tua scelta (1, 2, 3): "))
+            if choice in [1, 2, 3]:
+                return choice
+            else:
+                print("Seleziona un'opzione valida (1, 2, 3).")
+        except ValueError:
+            print("Input non valido. Inserisci un numero.")
+
+
 def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
     tool_info = TOOLS[tool_name]
 
     os.makedirs(tool_info['output_dir'], exist_ok=True)
+    # Creazione delle directory per il report e per l'output specifico del dataset
+    dataset_output_dir = os.path.join(tool_info['output_dir'], dataset_name)
+    os.makedirs(dataset_output_dir, exist_ok=True)
     os.makedirs(tool_info['report_dir'], exist_ok=True)
 
-    report_file = os.path.join(tool_info['report_dir'], f"{dataset_name}_report.txt")
+    report_file = os.path.join(tool_info['report_dir'], f"{dataset_name}.txt")
     csv_results = []
 
     with open(report_file, 'w') as report:
-        for file_path in file_paths:
+        for file_path in tqdm(file_paths, desc=f"Processing {tool_name}", leave=False):
             file_name = os.path.basename(file_path)
-            command = tool_info['command'](file_path)
-            output_path = os.path.join(tool_info['output_dir'], file_name)
+            file_name_no_ext = os.path.splitext(file_name)[0]
+            command = tool_info['command'](file_path, os.path.join(dataset_output_dir, file_name))
 
             # Esecuzione del comando
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+            if tool_name == 'MAFFT':
+                subprocess.run(command, shell=True, stderr=subprocess.DEVNULL, text=True)
+            else:
+                subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+
+            # Gestione specifica dell'output path per UPP e PASTA
+            if tool_name == 'UPP':
+                output_path = os.path.join(dataset_output_dir, file_name, "output_alignment.fasta")
+            elif tool_name == 'PASTA':
+                output_path = os.path.join(dataset_output_dir, file_name, f"pastajob.marker001.{file_name_no_ext}.aln")
+            else:
+                output_path = os.path.join(dataset_output_dir, file_name)
 
             # Lettura dell'output (da file o da stdout)
             if os.path.exists(output_path):
@@ -315,123 +263,213 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
             report.write(f"File: {file_name}\n")
             report.write(f"Alignment Length (AL): {metrics['AL']}\n")
             report.write(f"Number of Sequences (QTY): {metrics['QTY']}\n")
-            report.write(f"SP Score: {metrics['SP']}\n")
+            report.write(f"Sum of Pairs (SP): {metrics['SP']}\n")
             report.write(f"Exact Matches (EM): {metrics['EM']}\n")
-            report.write(f"Column Score (CS): {metrics['CS']:.3f}\n\n")
+            report.write(f"Column Score (CS): {metrics['CS']:.3f}\n")
+            report.write(f"Alignment:\n{env.get_alignment()}\n\n")
 
             # Aggiunta dei risultati per il CSV (con tutte le metriche)
             csv_results.append([
-                file_name, tool_name, metrics['AL'], metrics['QTY'],
+                file_name, metrics['AL'], metrics['QTY'],
                 metrics['SP'], metrics['EM'], metrics['CS']
             ])
+
+            # Rimozione dei file .dnd generati da ClustalW
+            if tool_name == 'ClustalW':
+                dnd_files = glob.glob(os.path.join(os.path.dirname(file_path), '*.dnd'))
+                for dnd_file in dnd_files:
+                    os.remove(dnd_file)
 
     return csv_results
 
 
-def append_results_to_csv(csv_data, csv_filename='tools_metrics.csv'):
+def save_inference_csv(csv_data, tool_name, dataset_name):
+    # Percorso dove salvare il CSV per il tool specifico
+    tool_csv_dir = os.path.join(config.CSV_PATH, tool_name)
+    os.makedirs(tool_csv_dir, exist_ok=True)
 
-    csv_path = os.path.join(CSV_PATH, csv_filename)
+    # Nome del file CSV
+    csv_file_path = os.path.join(tool_csv_dir, f"{dataset_name}_{tool_name}_results.csv")
 
-    headers = [
-        "File Name", "Tool", "Alignment Length (AL)",
-        "Number of Sequences (QTY)", "Sum of Pairs (SP)",
-        "Exact Matches (EM)", "Column Score (CS)"
-    ]
-
-    if os.path.exists(csv_path):
-        existing_data = pd.read_csv(csv_path)
-        new_data = pd.DataFrame(csv_data, columns=headers)
-        combined_data = pd.concat([existing_data, new_data], ignore_index=True)
+    # Se csv_data è una lista di liste (come generato da run_tool_and_generate_report)
+    if isinstance(csv_data, list):
+        columns = ["File Name", "Alignment Length (AL)",
+                   "Number of Sequences (QTY)", "Sum of Pairs (SP)",
+                   "Exact Matches (EM)", "Column Score (CS)"]
+        df = pd.DataFrame(csv_data, columns=columns)
     else:
-        combined_data = pd.DataFrame(csv_data, columns=headers)
+        # Se è già un DataFrame
+        df = pd.read_csv(csv_data)
 
-    combined_data.to_csv(csv_path, index=False)
-
-
-def display_menu():
-
-    print("Seleziona l'opzione per il benchmarking:")
-    print("1. GA-DPAMSA vs DPAMSA")
-    print("2. GA-DPAMSA vs Tools")
-    print("3. GA-DPAMSA vs DPAMSA vs Tools")
-
-    while True:
-        try:
-            choice = int(input("Inserisci il numero della tua scelta (1, 2, 3): "))
-            if choice in [1, 2, 3]:
-                return choice
-            else:
-                print("Seleziona un'opzione valida (1, 2, 3).")
-        except ValueError:
-            print("Input non valido. Inserisci un numero.")
+    df.to_csv(csv_file_path, index=False)
+    return csv_file_path  # Restituisce il path per aggiungerlo al dizionario
 
 
 def run_ga_dpamsa_inference(dataset, dataset_name, model_path):
 
     ga_inference(dataset=dataset, model_path=model_path, truncate_file=True)
-    return os.path.join(INFERENCE_CSV_PATH, "GA-DPAMSA",f"{dataset_name}.csv")
+    return os.path.join(GA_DPAMSA_INF_CSV_PATH, f"{dataset_name}_GA_DPAMSA_results.csv")
 
 
 def run_dpamsa_inference(dataset, dataset_name, model_path):
 
     dpamsa_inference(dataset=dataset, model_path=model_path, truncate_file=True)
-    return os.path.join(INFERENCE_CSV_PATH, "DPAMSA", f"{dataset_name}_dpamsa.csv")
-
-
-def aggregate_csvs(main_csv_path, additional_csv_paths):
-
-    # Carica il CSV principale
-    main_data = pd.read_csv(main_csv_path)
-
-    # Aggiungi i CSV aggiuntivi
-    for csv_path in additional_csv_paths:
-        additional_data = pd.read_csv(csv_path)
-
-        # Uniforma le colonne se necessario
-        if 'SP Score' in additional_data.columns:
-            additional_data.rename(columns={'SP Score': 'SP'}, inplace=True)
-
-        # Aggiungi le colonne mancanti se necessario
-        if 'Tool' not in additional_data.columns:
-            tool_name = 'GA-DPAMSA' if 'GA-DPAMSA' in csv_path else 'DPAMSA'
-            additional_data['Tool'] = tool_name
-
-        # Unisci i dati
-        main_data = pd.concat([main_data, additional_data], ignore_index=True)
-
-    # Salva il CSV combinato
-    main_data.to_csv(main_csv_path, index=False)
+    return os.path.join(DPAMSA_INF_CSV_PATH, f"{dataset_name}_DPAMSA_results.csv")
 
 
 # ------------------
 # DATA VIZ UTILS
 # ------------------
-def plot_metrics(csv_path, dataset_name):
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
 
-    data = pd.read_csv(csv_path)
-    sns.set(style="whitegrid")
 
-    # Definisci i colori: Rosso per GA-DPAMSA, Azzurro per gli altri
-    palette = ['#FF4C4C' if tool == 'GA-DPAMSA' else '#5BC0DE' for tool in data['Tool'].unique()]
+def plot_metrics(tool_csv_paths, dataset_name):
+    sum_of_pairs_data = []
+    column_score_data = []
+    mean_sp = {}
+    mean_cs = {}
 
-    ### BoxPlot per SP Score ###
-    plt.figure(figsize=(12, 6))
-    sns.boxplot(x='Tool', y='SP', data=data, palette=palette)
-    plt.title(f'Distribuzione degli SP Scores per ogni Tool - {dataset_name}')
-    plt.xticks(rotation=45)
+    # Colori: rosso per GA-DPAMSA, azzurro per gli altri
+    color_map = {'GA-DPAMSA': 'red'}
+
+    # Creazione della directory per i grafici del dataset
+    dataset_charts_dir = os.path.join(config.CHARTS_PATH, dataset_name)
+    os.makedirs(dataset_charts_dir, exist_ok=True)
+
+    # Preparazione dei dati
+    for tool, csv_path in tool_csv_paths.items():
+        df = pd.read_csv(csv_path)
+
+        # Colori specifici
+        color = 'red' if tool == 'GA-DPAMSA' else 'cyan'
+        color_map[tool] = color
+
+        # Dati per il box plot
+        sum_of_pairs_data.append((tool, df['Sum of Pairs (SP)']))
+        column_score_data.append((tool, df['Column Score (CS)']))
+
+        # Dati per il bar plot (valore medio)
+        mean_sp[tool] = df['Sum of Pairs (SP)'].mean()
+        mean_cs[tool] = df['Column Score (CS)'].mean()
+
+    tools = list(tool_csv_paths.keys())
+
+    # === BOX PLOT: Sum of Pairs (SP) ===
+    plt.figure(figsize=(12, 8))
+    plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)  # Linee di sfondo
+
+    boxplot = plt.boxplot(
+        [data for _, data in sum_of_pairs_data],
+        labels=tools,
+        patch_artist=True,
+        medianprops=dict(color='black', linewidth=2),
+        zorder=3  # Sovrapposizione sopra le linee di sfondo
+    )
+
+    # Colora i box
+    for patch, (tool, _) in zip(boxplot['boxes'], sum_of_pairs_data):
+        patch.set_facecolor(color_map[tool])
+
+    # Modifiche estetiche
+    plt.title(f'SP Distribution results for {dataset_name}', fontsize=16, fontweight='bold')
+    plt.ylabel('Sum of Pairs (SP)', fontweight='bold', fontsize=12)
+    plt.xticks(fontweight='bold', fontsize=10)
+    plt.xticks(rotation=45, ha='right')
+
     plt.tight_layout()
-    plt.savefig(os.path.join(CHARTS_PATH, f'{dataset_name}_sp_score_boxplot.png'))
-    plt.show()
+    plt.savefig(os.path.join(dataset_charts_dir, f'sum_of_pairs_distribution.png'), dpi=300)
+    plt.close()
 
-    ### BarPlot per le medie delle metriche ###
-    mean_metrics = data.groupby('Tool').mean().reset_index()
-    metrics_to_plot = ['SP', 'EM', 'CS']
+    # === BOX PLOT: Column Score (CS) ===
+    plt.figure(figsize=(12, 8))
+    plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
 
-    for metric in metrics_to_plot:
-        plt.figure(figsize=(10, 6))
-        sns.barplot(x='Tool', y=metric, data=mean_metrics, palette=palette)
-        plt.title(f'Valori Medi di {metric} per ogni Tool')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(os.path.join(CHARTS_PATH, f'{dataset_name}_{metric.lower()}_barplot.png'))
-        plt.show()
+    boxplot = plt.boxplot(
+        [data for _, data in column_score_data],
+        labels=tools,
+        patch_artist=True,
+        medianprops=dict(color='black', linewidth=2),
+        zorder=3
+    )
+
+    for patch, (tool, _) in zip(boxplot['boxes'], column_score_data):
+        patch.set_facecolor(color_map[tool])
+
+    plt.title(f'CS Distribution results for {dataset_name}', fontsize=16, fontweight='bold')
+    plt.ylabel('Column Score (CS)', fontweight='bold', fontsize=12)
+    plt.xticks(fontweight='bold', fontsize=10)
+    plt.xticks(rotation=45, ha='right')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(dataset_charts_dir, f'column_score_distribution.png'), dpi=300)
+    plt.close()
+
+    # === BAR PLOT: Mean Sum of Pairs (SP) ===
+    plt.figure(figsize=(12, 8))
+    plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
+
+    bars = plt.bar(
+        mean_sp.keys(),
+        mean_sp.values(),
+        color=[color_map[tool] for tool in mean_sp.keys()],
+        edgecolor='black', linewidth=2,  # Bordo più spesso
+        zorder=3
+    )
+
+    # Aggiunta dei valori sopra le barre
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + (0.01 * height),  # Posiziona leggermente sopra la barra
+            f'{height:.2f}',
+            ha='center',
+            va='bottom',
+            fontweight='bold',
+            fontsize=10
+        )
+
+    plt.title(f'Mean SP results for {dataset_name}', fontsize=16, fontweight='bold')
+    plt.ylabel('Mean SP', fontweight='bold', fontsize=12)
+    plt.xticks(fontweight='bold', fontsize=10)
+    plt.xticks(rotation=45, ha='right')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(dataset_charts_dir, f'mean_sum_of_pairs.png'), dpi=300)
+    plt.close()
+
+    # === BAR PLOT: Mean Column Score (CS) ===
+    plt.figure(figsize=(12, 8))
+    plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
+
+    bars = plt.bar(
+        mean_cs.keys(),
+        mean_cs.values(),
+        color=[color_map[tool] for tool in mean_cs.keys()],
+        edgecolor='black', linewidth=2,
+        zorder=3
+    )
+
+    # Aggiunta dei valori sopra le barre
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + (0.01 * height),
+            f'{height:.3f}',  # Più decimali per il CS
+            ha='center',
+            va='bottom',
+            fontweight='bold',
+            fontsize=10
+        )
+
+    plt.title(f'Mean CS results for {dataset_name}', fontsize=16, fontweight='bold')
+    plt.ylabel('Mean CS', fontweight='bold', fontsize=12)
+    plt.xticks(fontweight='bold', fontsize=10)
+    plt.xticks(rotation=45, ha='right')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(dataset_charts_dir, f'mean_column_score.png'), dpi=300)
+    plt.close()

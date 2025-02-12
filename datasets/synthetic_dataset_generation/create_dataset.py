@@ -1,24 +1,22 @@
+import config
 import random
 import os
-import config
 from tqdm import tqdm
 
-import utils
-
 # Configuration parameters
-num_sequences = 3
+num_sequences = 6
 sequence_length = 30
 mutation_rate = 0.10  # Mutation rate 10%
 gap_rate = 0.05  # Gap insertion rate
 number_of_dataset = 50
 min_score_threshold = 10  # Minimum alignment score threshold
-DATASET_NAME = 'synthetic_dataset_3x30bp'
+DATASET_NAME = 'synthetic_dataset_6x30bp'
 
 # Number and lengths of conserved blocks
-conserved_block_sizes = [5]  # List of conserved block lengths
+conserved_block_sizes = [8]  # List of conserved block lengths
 
-FILE_NAME_SCRIPT_OUTPUT = f'{utils.TRAINING_DATASET_PATH}/{DATASET_NAME}.py'
-FASTA_OUTPUT = f'{utils.FASTA_FILES_PATH}/{DATASET_NAME}'
+FILE_NAME_SCRIPT_OUTPUT = f'{config.TRAINING_DATASET_PATH}/{DATASET_NAME}.py'
+FASTA_OUTPUT = f'{config.FASTA_FILES_PATH}/{DATASET_NAME}'
 
 if not os.path.exists(FASTA_OUTPUT):
     os.makedirs(FASTA_OUTPUT)
