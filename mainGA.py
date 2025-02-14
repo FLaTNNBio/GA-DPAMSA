@@ -35,8 +35,9 @@ def output_parameters():
     print('\n')
 
 
-def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncate_file=True):
-
+def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncate_file=True,  column_score_mode=False, multi_objective_mode=True):
+    if column_score_mode and multi_objective_mode:
+        raise Exception("You can't use both column score mode and multi objective mode")
     output_parameters()
 
     tag = os.path.splitext(dataset.file_name)[0]
@@ -91,19 +92,32 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
         
             #Mutation with the RL agent
             #ga.random_mutation(model_path)
-            ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)   
-            #Calculate the fitness score for all individuals, based on the sum-of-pairs
-            ga.calculate_fitness_score()
-
-            #Execute the selection, get only the most fitted individual for the next iteration
-            ga.selection()
+            ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path, column_score_mode)
+            # Calculate the fitness score for all individuals, based on the sum-of-pairs
+            if column_score_mode:
+                ga.calculate_fitness_score()
+            else:
+                ga.calculate_column_score()
+            # Execute the selection, get only the most fitted individual for the next iteration
+            if not multi_objective_mode:
+                ga.selection(column_score_mode)
+            else:
+                ga.selection_intersection()
 
             #Crossover, split board in two different part and create new individuals by merging each part by 
             #taking the first part from one individual and the second part from another individual
             ga.horizontal_crossover()
             #ga.vertical_crossover()
         #In the last iteration, we have to perform again the calculation (last operation is the crossover, so we need to recheck the score)
-        ga.calculate_fitness_score()
+        if column_score_mode:
+            ga.calculate_fitness_score()
+        else:
+            ga.calculate_column_score()
+
+        if not multi_objective_mode:
+            most_fitted_chromosome, sum_pairs_score, final_column_score = ga.get_most_fitted_chromosome()
+        else:
+            most_fitted_chromosome, most_fitted_combine, sum_pairs_score, final_column_score = ga.get_most_fitted_chromosome_intersection()
 
         most_fitted_chromosome = ga.get_most_fitted_chromosome()
         aligned_seqs = ga.get_nucleotides_seqs(most_fitted_chromosome)

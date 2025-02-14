@@ -43,6 +43,25 @@ def get_sum_of_pairs(chromosome,from_row,to_row,from_column,to_column):
     return score
 
 
+def get_column_score(chromosome, from_row, to_row, from_column, to_column):
+    # Numero di colonne considerate
+    M = to_column - from_column
+
+    # Contatore delle colonne con tutti i valori uguali
+    uniform_columns_count = 0
+
+    # Itera sulle colonne
+    for col in range(from_column, to_column):
+        # Estrai i valori della colonna corrente (col) per le righe nel range [from_row, to_row)
+        col_values = [chromosome[row][col] for row in range(from_row, to_row)]
+
+        # Se tutti i valori sono uguali, incrementa il contatore
+        if all(value == col_values[0] for value in col_values):
+            uniform_columns_count += 1
+
+    # Restituisci la media (normalizzata su M)
+    return uniform_columns_count / M if M > 0 else 0
+
 def check_overlap(new_range,used_ranges):
     for existing_range in used_ranges:
         if is_overlap(new_range, existing_range):

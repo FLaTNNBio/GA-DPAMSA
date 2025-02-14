@@ -14,6 +14,7 @@ class GA:
         self.sequences = sequences
         self.population_size = config.GA_POPULATION_SIZE
         self.population = []
+        self.population_column_score = []
         self.population_score = []
         self.unique_ranges = []
 
@@ -47,16 +48,70 @@ class GA:
                         elif chromosome[j][i] != chromosome[k][i]:
                             score += config.MISMATCH_PENALTY
             self.population_score.append((index_chromosome,score))
+
+    def calculate_column_score(self):
+        self.population_column_score = []
+
+        for index_chromosome, chromosome in enumerate(self.population):
+            gene_max_len = max(len(gene) for gene in chromosome)
+            for gene in chromosome:
+                while len(gene) < gene_max_len:
+                    gene.append(5)  # gap
+
+            num_sequences = len(chromosome)
+            num_columns = gene_max_len
+            column_score_count = 0
+
+            for col in range(num_columns):
+                col_values = [chromosome[row][col] for row in range(num_sequences)]
+                if all(x == col_values[0] for x in col_values):
+                    column_score_count += 1
+
+            column_score = column_score_count / num_columns
+
+            self.population_column_score.append((index_chromosome, column_score))
     
-    def selection(self):
+    def selection(self, column_score_mode=False):
         #Selection
         #Sort the population based on the score
-        population_score_sorted = sorted(self.population_score, key=lambda x: x[1])
+        if column_score_mode:
+            population_score_sorted = sorted(self.population_column_score, key=lambda x: x[1])
+        else:
+            population_score_sorted = sorted(self.population_score, key=lambda x: x[1])
         #Get the index of the worst fitted individuals
         worst_fitted_individual = [item[0] for item in population_score_sorted[:config.GA_NUM_MOST_FIT_FOR_ITER]]
         #Delete individuals with the worst score 
         for index in sorted(worst_fitted_individual,reverse=True):
             self.population.pop(index)
+
+
+    def selection_intersection(self):
+        # Calcola entrambe le metriche per la popolazione corrente
+        self.calculate_fitness_score()
+        self.calculate_column_score()
+
+        # Ordina gli individui in base al punteggio sum-of-pairs (migliori = punteggio più alto)
+        sorted_sop = sorted(self.population_score, key=lambda x: x[1], reverse=True)
+        # Ordina gli individui in base al column score (migliori = punteggio più alto)
+        sorted_column = sorted(self.population_column_score, key=lambda x: x[1], reverse=True)
+
+        # Definisci quanti individui considerare tra i migliori per ciascuna metrica
+        top_n = config.GA_NUM_MOST_FIT_FOR_ITER
+
+        # Estrai gli indici dei top individui per ciascuna metrica
+        top_indices_sop = {ind for ind, score in sorted_sop[:top_n]}
+        top_indices_column = {ind for ind, score in sorted_column[:top_n]}
+
+        # Calcola l'intersezione degli indici
+        intersection_indices = top_indices_sop.intersection(top_indices_column)
+
+        # Se l'intersezione è vuota, come fallback prendi la loro unione
+        if not intersection_indices:
+            intersection_indices = top_indices_sop.union(top_indices_column)
+
+        # Aggiorna la popolazione mantenendo solo gli individui dell'intersezione
+        new_population = [chromosome for idx, chromosome in enumerate(self.population) if idx in intersection_indices]
+        self.population = new_population
         
     
     def get_alignment(self,chromosome):
@@ -75,6 +130,44 @@ class GA:
         # final_score = utils.get_sum_of_pairs(most_fitted_individual,0,len(most_fitted_individual),0,len(most_fitted_individual[0]))
         # return most_fitted_individual,final_score
         return most_fitted_individual
+
+
+    def get_most_fitted_chromosome_intersection(self):
+        # Calcola entrambe le metriche per la popolazione
+        self.calculate_fitness_score()
+        self.calculate_column_score()
+
+        # Calcola un punteggio combinato per ogni individuo (somma del sum-of-pairs e del column score)
+        combined_scores = []
+        for idx in range(len(self.population)):
+            sop_score = next(score for i, score in self.population_score if i == idx)
+            col_score = next(score for i, score in self.population_column_score if i == idx)
+            combined_scores.append((idx, sop_score + col_score))
+
+        # Seleziona l'individuo con il punteggio combinato più alto
+        best_idx, best_combined = max(combined_scores, key=lambda x: x[1])
+        best_individual = self.population[best_idx]
+
+        # Pulisci eventuali gap non necessari (come fatto in get_most_fitted_chromosome)
+        utils.clean_unnecessary_gaps(best_individual)
+
+        # Calcola i punteggi finali per il cromosoma migliore
+        final_sum_pairs = utils.get_sum_of_pairs(
+            best_individual,
+            0,
+            len(best_individual),
+            0,
+            len(best_individual[0])
+        )
+        final_column_score = utils.get_column_score(
+            best_individual,
+            0,
+            len(best_individual),
+            0,
+            len(best_individual[0])
+        )
+
+        return best_individual, best_combined, final_sum_pairs, final_column_score
 
     def vertical_crossover(self):
         #Calculation of the mean length of a sequences, to calculate the position in which we cut every sequence in a chromosome
@@ -219,11 +312,19 @@ class GA:
             individual_to_mutate[from_row:to_row] = genes_to_mutate
 
     #Perform gene mutation only on individuals with the highest sum-of-pairs-score and then apply the mutation on the worst sub-board
-    def mutation_on_best_fitted_individuals_worst_sub_board(self,model_path):
+    def mutation_on_best_fitted_individuals_worst_sub_board(self,model_path, column_score_mode=False):
         #The mutation is performed until we cover all the possible sub-board for a individual
-        self.calculate_fitness_score()
+        if column_score_mode:
+            self.calculate_column_score()
+        else:
+            self.calculate_fitness_score()
         num_individuals_to_mutate = round(config.GA_POPULATION_SIZE * config.GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER)
-        best_fitted_individual = utils.get_index_of_the_best_fitted_individuals(self.population_score,num_individuals_to_mutate)
+        if column_score_mode:
+            best_fitted_individual = utils.get_index_of_the_best_fitted_individuals(self.population_column_score,
+                                                                                    num_individuals_to_mutate)
+        else:
+            best_fitted_individual = utils.get_index_of_the_best_fitted_individuals(self.population_score,
+                                                                                    num_individuals_to_mutate)
         for index in best_fitted_individual:
             individual_to_mutate = self.population[index]
 
