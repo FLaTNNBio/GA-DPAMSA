@@ -121,9 +121,12 @@ class GA:
 
         return alignment.rstrip()
     
-    def get_most_fitted_chromosome(self):
+    def get_most_fitted_chromosome(self, column_score_mode):
         #Sort the population based on the score
-        population_score_sorted = sorted(self.population_score, key=lambda x: x[1], reverse=True)
+        if not column_score_mode:
+            population_score_sorted = sorted(self.population_score, key=lambda x: x[1], reverse=True)
+        else:
+            population_score_sorted = sorted(self.population_column_score, key=lambda x: x[1], reverse=True)
         most_fitted_individual = self.population[population_score_sorted[0][0]]     
         #Clean all gaps that appear after the last nucleotide (if along the whole row and all columns there are only gaps)
         utils.clean_unnecessary_gaps(most_fitted_individual)
@@ -167,7 +170,7 @@ class GA:
             len(best_individual[0])
         )
 
-        return best_individual, best_combined, final_sum_pairs, final_column_score
+        return best_individual, final_sum_pairs, final_column_score
 
     def vertical_crossover(self):
         #Calculation of the mean length of a sequences, to calculate the position in which we cut every sequence in a chromosome

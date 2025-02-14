@@ -94,7 +94,7 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
             #ga.random_mutation(model_path)
             ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path, column_score_mode)
             # Calculate the fitness score for all individuals, based on the sum-of-pairs
-            if column_score_mode:
+            if not column_score_mode:
                 ga.calculate_fitness_score()
             else:
                 ga.calculate_column_score()
@@ -109,17 +109,17 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
             ga.horizontal_crossover()
             #ga.vertical_crossover()
         #In the last iteration, we have to perform again the calculation (last operation is the crossover, so we need to recheck the score)
-        if column_score_mode:
+        if not column_score_mode:
             ga.calculate_fitness_score()
         else:
             ga.calculate_column_score()
 
         if not multi_objective_mode:
-            most_fitted_chromosome, sum_pairs_score, final_column_score = ga.get_most_fitted_chromosome()
+            most_fitted_chromosome = ga.get_most_fitted_chromosome(column_score_mode)
         else:
-            most_fitted_chromosome, most_fitted_combine, sum_pairs_score, final_column_score = ga.get_most_fitted_chromosome_intersection()
-
-        most_fitted_chromosome = ga.get_most_fitted_chromosome()
+            most_fitted_chromosome, sum_pairs_score, final_column_score = ga.get_most_fitted_chromosome_intersection()
+        #print(most_fitted_chromosome)
+        #most_fitted_chromosome = ga.get_most_fitted_chromosome()
         aligned_seqs = ga.get_nucleotides_seqs(most_fitted_chromosome)
 
         Environment.set_alignment(env, aligned_seqs)
