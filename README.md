@@ -56,10 +56,18 @@ Note that the GAP is encoded with $5$. Thus, after this phase, we will have a $4
 The number of individuals will then be configurable by the user based on their needs (in the [config.py](config.py) file ). In this generation phase, all possible ranges of size $2x4$ on the board are also calculated (specifically, those ranges for which the agent is trained). Each range is calculated to ensure that all ranges are different and there is no overlap, to prevent the RL agent from operating in areas where it has already performed an alignment on another individual.
 
 ### Fitness score
-We do not calculate the fitness score immediately after generating the population because, in the initial phase, the population consists of identical individuals; the same board is replicated $n$ times (where $n$ can be customized by the user). We introduce the fitness score now because it is useful for understanding how the mutation phase will operate. The fitness score essentially involves calculating the sum-of-pairs for each individual in the population. Below is the formula used to calculate sum-of-pairs:
+The genetic algorithm has three modes:
+1.  **Maximize Sum of pairs** : The fitness score is based on the sum of pairs.
+2.  **Maximize Column score** : The fitness score is based on the column score.
+3.  **Maximize intersection** : The fitness score calculates both column score and sum of pairs, then are selected best individuals based on the intersetion between the two metrics.
+We do not calculate the fitness score immediately after generating the population because, in the initial phase, the population consists of identical individuals; the same board is replicated $n$ times (where $n$ can be customized by the user). We introduce the fitness score now because it is useful for understanding how the mutation phase will operate. The fitness score essentially involves calculating the sum-of-pairs, or column score or both, for each individual in the population.
+Below is the formula used to calculate sum-of-pairs:
 
 ![Sum-of-pairs](/img/sum-of-pairs-formula.png)
 
+Below is the formula used to calculate column score:
+
+![Sum-of-pairs](/img/colum_score_formula.png)
 
  It is important to note that if the algorithm is used with an RL model that employs different weights for gaps, matches, and mismatches, the fitness score calculation must also be adjusted to use the same weights. This avoids inconsistencies between the weights used by the RL agent and those used by the algorithm. These values can be easily modified in the [config.py](config.py) file of the application.
 
@@ -73,7 +81,7 @@ We do not calculate the fitness score immediately after generating the populatio
 ![Mutation](/img/mutation-dpamsa.png)
 
 ### Selection
-The selection phase of our algorithm involves calculating the sum-of-pairs for each individual and ordering them based on the obtained value. At this point, only the top $n$ individuals with the highest sum-of-pairs will be selected to generate new individuals and proceed to the next iteration. The value of $n$ can be customized by the user based on their needs and how the algorithm responds to their problem.
+The selection phase of our algorithm involves calculating the sum-of-pairs or the column score for each individual and ordering them based on the obtained value. At this point, only the top $n$ individuals with the highest sum-of-pairs or column score will be selected to generate new individuals and proceed to the next iteration. The value of $n$ can be customized by the user based on their needs and how the algorithm responds to their problem. If the GA is in Multi-Objective mode, the selection will calculate both SP and CS and will select the intersection between the best individuals for every metric.
 
 ### Crossover
 For the crossover phase, we have provided two different methods for generating new individuals: **vertical crossover** and **horizontal crossover**.  For both methods, two individuals (from those that passed the selection phase) are chosen as pairs, referred to as *Parent 1* and *Parent 2*. From each pair, a new individual will be created until we reach the number 
@@ -150,7 +158,10 @@ python3 mainGA.py
 ```
 To change dataset for inference, you need to insert it into the [datasets/inference_dataset](./datasets/inference_dataset/) folder and import it into the [mainGA.py](./mainGA.py) file, essentially you need to modify the first line, indicating the name of the dataset.
 From the [mainGA.py](./mainGA.py) file it is possible to change the type of mutation and the type of crossover of the genetic algorithm.
-
+In ```inference``` function, there are two boolean arguments:
+```column_score_mode```: if True, the GA will maximize only the column score
+```multi_objective_mode```: if True, the GA will use the intersection between the to metrics
+These two arguments cannot be True at the same time.
 ```python
 for i in range(config.GA_NUM_ITERATION):
 
