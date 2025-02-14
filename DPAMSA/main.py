@@ -8,16 +8,17 @@ import os
 from tqdm import tqdm
 import torch
 
-dataset = dataset1
+DATASET = dataset1
+INFERENCE_MODEL = 'model_3x30'
 
 
 def main():
     config.DEVICE = torch.device(config.DEVICE_NAME)
-    multi_train(dataset, truncate_file=False)
+    multi_train(DATASET, truncate_file=False)
 
 
 def output_parameters():
-    print("---------- DPAMSA parameters -----------------")
+    print("---- DPAMSA parameters ---")
     print("Gap penalty: {}".format(config.GAP_PENALTY))
     print("Mismatch penalty: {}".format(config.MISMATCH_PENALTY))
     print("Match reward: {}".format(config.MATCH_REWARD))
@@ -34,7 +35,7 @@ def output_parameters():
     print('\n')
 
 
-def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_path='model_4x101'):
+def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_path='model_4x101'):
 
     output_parameters()
 
@@ -138,10 +139,10 @@ def multi_train(dataset=dataset, start=0, end=-1, truncate_file=False, model_pat
 def train(index):
     output_parameters()
 
-    assert hasattr(dataset, "dataset_{}".format(index)), "No such data called {}".format("dataset_{}".format(index))
-    data = getattr(dataset, "dataset_{}".format(index))
+    assert hasattr(DATASET, "dataset_{}".format(index)), "No such data called {}".format("dataset_{}".format(index))
+    data = getattr(DATASET, "dataset_{}".format(index))
 
-    print("{}: dataset_{}: {}".format(dataset.file_name, index, data))
+    print("{}: dataset_{}: {}".format(DATASET.file_name, index, data))
 
     env = Environment(data)
     agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
@@ -178,7 +179,7 @@ def train(index):
     print("********************************\n")
 
 
-def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncate_file=True):
+def inference(dataset=DATASET, start=0, end=-1, model_path=INFERENCE_MODEL, truncate_file=True):
 
     output_parameters()
 
@@ -254,8 +255,41 @@ def inference(dataset=dataset, start=0, end=-1, model_path='model_3x30', truncat
     print(f"Il file CSV è stato salvato in: {config.CSV_PATH}\n\n")
 
 
+def menu():
+    """
+    Menu interattivo per selezionare tra training e inferenza.
+    """
+    while True:
+        print("\n====== DPAMSA MENU ======")
+        output_parameters()
+        print(f"Dataset loaded: {DATASET.file_name}\n\n")
+        print("1 - Train the model")
+        print("2 - Run inference")
+        print("3 - Exit")
+
+        choice = input("Select an option (1/2/3): ").strip()
+
+        if choice == "1":
+            print("\nStarting training...")
+            config.DEVICE = torch.device(config.DEVICE_NAME)
+            multi_train(DATASET)
+
+        elif choice == "2":
+            print(f"\nModel selected for inference: {INFERENCE_MODEL}")
+            confirm = input("Do you want to proceed with inference? (yes/no): ").strip().lower()
+            if confirm == "yes":
+                print("\nStarting inference...")
+                inference(DATASET, model_path=INFERENCE_MODEL)
+            else:
+                print("\nInference canceled.")
+
+        elif choice == "3":
+            print("\nExiting program. Goodbye!")
+            break
+
+        else:
+            print("\nInvalid choice, please enter 1, 2, or 3.")
+
+
 if __name__ == "__main__":
-
-    main()
-
-    #inference(model_path='model_3x30')
+    menu()
