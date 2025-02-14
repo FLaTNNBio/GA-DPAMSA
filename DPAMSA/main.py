@@ -1,23 +1,40 @@
-import datasets.training_dataset.synthetic_dataset_4x101bp as dataset1
-import utils
-from DPAMSA.env import Environment
-from DPAMSA.dqn import DQN
-import config
 import csv
 import os
-from tqdm import tqdm
 import torch
+from tqdm import tqdm
+
+import config
+from DPAMSA.dqn import DQN
+from DPAMSA.env import Environment
+import utils
+
+import datasets.training_dataset.synthetic_dataset_4x101bp as dataset1
 
 DATASET = dataset1
 INFERENCE_MODEL = 'model_3x30'
 
+"""
+DPAMSA Main Script
 
-def main():
-    config.DEVICE = torch.device(config.DEVICE_NAME)
-    multi_train(DATASET, truncate_file=False)
+This script serves as the main entry point for running the DPAMSA framework. 
+It provides functionalities for training a reinforcement learning model, 
+running inference using a pre-trained model, and managing datasets.
+
+Key Features:
+- Loads datasets and configurations.
+- Trains a Deep Q-Network (DQN) for sequence alignment.
+- Runs inference to generate alignments using a trained model.
+- Saves results as reports and CSV files.
+- Provides an interactive menu for user selection.
+
+Author: https://github.com/ZhangLab312/DPAMSA
+"""
 
 
 def output_parameters():
+    """
+    Print the key DPAMSA configuration parameters.
+    """
     print("---- DPAMSA parameters ---")
     print("Gap penalty: {}".format(config.GAP_PENALTY))
     print("Mismatch penalty: {}".format(config.MISMATCH_PENALTY))
@@ -36,35 +53,31 @@ def output_parameters():
 
 
 def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_path='model_4x101'):
+    """
+    Train a reinforcement learning model on the given dataset.
 
+    Parameters:
+    -----------
+    - dataset (module): The dataset module containing sequences.
+    - start (int): Index to start processing datasets.
+    - end (int): Index to stop processing datasets (-1 for all).
+    - truncate_file (bool): Whether to overwrite report files.
+    - model_path (str): Path to save the trained model.
+    """
     output_parameters()
 
     tag = os.path.splitext(dataset.file_name)[0]
     report_file_name = os.path.join(config.DPAMSA_REPORTS_PATH, f"{tag}.txt")
     csv_file_name = os.path.join(config.CSV_PATH, "DPAMSA_training", f"{tag}.csv")
 
+    # Create or truncate results files
     if truncate_file:
-        # Se truncate_file è True, tronca i file
         with open(report_file_name, 'w'):
             pass
         with open(csv_file_name, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(["Dataset Name", "Number of Sequences", "Alignment Length", "SP Score", "Exact Matches",
                              "Column Score"])
-    else:
-        # Se truncate_file è False, crea il file se non esiste e scrivi l'intestazione
-        if not os.path.exists(report_file_name):
-            with open(report_file_name, 'w'):
-                pass
-        if not os.path.exists(csv_file_name):
-            with open(csv_file_name, 'w', newline='') as csv_file:
-                writer = csv.writer(csv_file)
-                writer.writerow(["File Name", "Number of Sequences (QTY)", "Alignment Length (AL)", "Sum of Pairs (SP)",
-                                 "Exact Matches (EM)", "Column Score (CS)"])
-
-    if truncate_file:
-        with open(report_file_name, 'w'):
-            pass
 
     datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
 
@@ -75,15 +88,15 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
 
         env = Environment(seqs)
         agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
-        p = tqdm(range(config.MAX_EPISODE))
-        p.set_description(name)
 
+        # Load pre-trained model if available
         try:
             agent.load(model_path + '.pth')
         except:
             pass
 
-        for _ in p:
+        # Training loop
+        for _ in tqdm(range(config.MAX_EPISODE), desc=name):
             state = env.reset()
             while True:
                 action = agent.select(state)
@@ -95,8 +108,8 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
                 state = next_state
             agent.update_epsilon()
 
+        # Generate final alignment using the trained model
         state = env.reset()
-
         while True:
             action = agent.predict(state)
             _, next_state, done = env.step(action)
@@ -107,12 +120,12 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
         env.padding()
         agent.save(model_path)
 
+        # Compute and store alignment metrics
         alignment_length = len(env.aligned[0])
         sp_score = env.calc_score()
         exact_matches = env.calc_exact_matched()
         column_score = exact_matches / alignment_length
         num_sequences = len(env.aligned)
-        # Crea il report testuale
 
         report = (
             f"File: {name}\n"
@@ -124,6 +137,7 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
             f"Alignment:\n{env.get_alignment()}\n\n"
         )
 
+        # Save results to files
         with open(report_file_name, 'a') as report_file:
             report_file.write(report)
 
@@ -131,12 +145,19 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
             writer = csv.writer(csv_file)
             writer.writerow([name, alignment_length, num_sequences, sp_score, exact_matches, column_score])
 
-    print(f"\nOperazione completata con successo.")
-    print(f"Il file di report è stato salvato in: {config.DPAMSA_REPORTS_PATH}")
-    print(f"Il file CSV è stato salvato in: {config.CSV_PATH}")
+    print(f"\nTraining completed successfully.")
+    print(f"Report saved at: {report_file_name}")
+    print(f"CSV saved at: {csv_file_name}")
 
 
 def train(index):
+    """
+    Train the model on a specific dataset.
+
+    Parameters:
+    -----------
+    - index (int): The dataset index to train on.
+    """
     output_parameters()
 
     assert hasattr(DATASET, "dataset_{}".format(index)), "No such data called {}".format("dataset_{}".format(index))
@@ -160,7 +181,7 @@ def train(index):
             state = next_state
         agent.update_epsilon()
 
-    # Predict
+    # Run inference on trained model
     state = env.reset()
     while True:
         action = agent.predict(state)
@@ -170,6 +191,8 @@ def train(index):
             break
 
     env.padding()
+
+    # Print final alignment results
     print("**********dataset: {} **********\n".format(data))
     print("total length : {}".format(len(env.aligned[0])))
     print("sp score     : {}".format(env.calc_score()))
@@ -180,31 +203,30 @@ def train(index):
 
 
 def inference(dataset=DATASET, start=0, end=-1, model_path=INFERENCE_MODEL, truncate_file=True):
+    """
+    Run inference using a pre-trained model on a given dataset.
 
+    Parameters:
+    - dataset (module): The dataset module containing sequences.
+    - start (int): Index to start processing datasets.
+    - end (int): Index to stop processing datasets (-1 for all).
+    - model_path (str): Path to the pre-trained model.
+    - truncate_file (bool): Whether to overwrite report files.
+    """
     output_parameters()
 
     tag = os.path.splitext(dataset.file_name)[0]
     report_file_name = os.path.join(config.DPAMSA_REPORTS_PATH, f"{tag}.txt")
     csv_file_name = os.path.join(config.DPAMSA_INF_CSV_PATH, f"{tag}_DPAMSA_results.csv")
 
+    # Create or truncate results files
     if truncate_file:
-        # Se truncate_file è True, tronca i file
         with open(report_file_name, 'w'):
             pass
         with open(csv_file_name, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(["File Name", "Number of Sequences (QTY)", "Alignment Length (AL)", "Sum of Pairs (SP)",
                              "Exact Matches (EM)", "Column Score (CS)"])
-    else:
-        # Se truncate_file è False, crea il file se non esiste e scrivi l'intestazione
-        if not os.path.exists(report_file_name):
-            with open(report_file_name, 'w'):
-                pass
-        if not os.path.exists(csv_file_name):
-            with open(csv_file_name, 'w', newline='') as csv_file:
-                writer = csv.writer(csv_file)
-                writer.writerow(["File Name", "Number of Sequences (QTY)", "Alignment Length (AL)", "Sum of Pairs (SP)",
-                                 "Exact Matches (EM)", "Column Score (CS)"])
 
     datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
 
@@ -228,9 +250,10 @@ def inference(dataset=DATASET, start=0, end=-1, model_path=INFERENCE_MODEL, trun
 
         env.padding()
 
+        # Compute metrics
         metrics = utils.calculate_metrics(env)
 
-        # Crea il report testuale
+        # Create report
         report = (
             f"File: {name}\n"
             f"Alignment Length (AL): {metrics['AL']}\n"
@@ -241,23 +264,22 @@ def inference(dataset=DATASET, start=0, end=-1, model_path=INFERENCE_MODEL, trun
             f"Alignment:\n{env.get_alignment()}\n\n"
         )
 
-        # Scrive il report nel file .rpt
+        # Save results to files
         with open(report_file_name, 'a') as report_file:
             report_file.write(report)
 
-        # Scrive i dati nel file CSV
         with open(csv_file_name, 'a', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow([name, metrics['AL'], metrics['QTY'], metrics['SP'], metrics['EM'], metrics['CS']])
 
-    print(f"\nOperazione completata con successo.")
-    print(f"Il file di report è stato salvato in: {config.DPAMSA_REPORTS_PATH}")
-    print(f"Il file CSV è stato salvato in: {config.CSV_PATH}\n\n")
+    print(f"\nInference completed successfully.")
+    print(f"Report saved at: {report_file_name}")
+    print(f"CSV saved at: {csv_file_name}\n\n")
 
 
 def menu():
     """
-    Menu interattivo per selezionare tra training e inferenza.
+    Interactive menu for training/inference mode selection.
     """
     while True:
         print("\n====== DPAMSA MENU ======")
