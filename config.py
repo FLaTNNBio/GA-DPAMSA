@@ -1,39 +1,50 @@
-import os
-
-import torch
 import math
+import os
+import torch
 
-# DPAMSA parameters
-GAP_PENALTY = -4
-MISMATCH_PENALTY = -4
-MATCH_REWARD = 4
-MAX_EPISODE = 6000
-BATCH_SIZE = 128
-REPLAY_MEMORY_SIZE = 1000
-ALPHA = 0.0001
-EPSILON = 0.8
-GAMMA = 1
-DELTA = 0.05
-DECREMENT_ITERATION = math.ceil(MAX_EPISODE * 0.8 / (EPSILON // DELTA))
-UPDATE_ITERATION = 128
-DEVICE_NAME = "cuda:0" if torch.cuda.is_available() else "cpu"
-DEVICE = 'cpu'
+"""
+Configuration File
 
-# GA parameters
-AGENT_WINDOW_ROW = 3
-AGENT_WINDOW_COLUMN = 30
-GA_POPULATION_SIZE = 5
-GA_NUM_ITERATION = 3
-GA_NUM_MOST_FIT_FOR_ITER = 2
-GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER = 0.20 #20%
+This script defines the configuration settings for the GA-DPAMSA framework, including:
+- Hyperparameters for Deep Q-Network (DQN) and Genetic Algorithm (GA).
+- File paths for datasets, model weights, and results.
+- Setup for external multiple sequence alignment (MSA) tools.
+- Automatic directory creation to ensure required folders exist.
+
+Author: https://github.com/ZhangLab312/DPAMSA
+Co-Author: https://github.com/FLaTNNBio/GA-DPAMSA
+"""
+
+# ===========================
+# DPAMSA Hyperparameters
+# ===========================
+GAP_PENALTY = -4  # Penalty for inserting a gap
+MISMATCH_PENALTY = -4  # Penalty for a mismatch
+MATCH_REWARD = 4  # Reward for a correct match
+MAX_EPISODE = 6000  # Maximum number of training episodes
+BATCH_SIZE = 128  # Number of experiences sampled per training step
+REPLAY_MEMORY_SIZE = 1000  # Capacity of replay memory buffer
+ALPHA = 0.0001  # Learning rate for the optimizer
+EPSILON = 0.8  # Initial epsilon value for ε-greedy policy
+GAMMA = 1  # Discount factor for Q-learning
+DELTA = 0.05  # Epsilon decrement step size
+DECREMENT_ITERATION = math.ceil(MAX_EPISODE * 0.8 / (EPSILON // DELTA))  # Number of steps to decay epsilon
+UPDATE_ITERATION = 128  # Number of iterations before updating the target network
+DEVICE_NAME = "cuda:0" if torch.cuda.is_available() else "cpu"  # Auto-detect GPU or CPU
+DEVICE = 'cpu'  # Default computation device
+
+# ===========================
+# Genetic Algorithm (GA) Parameters
+# ===========================
+AGENT_WINDOW_ROW = 3  # Number of rows in the agent's observation window
+AGENT_WINDOW_COLUMN = 30  # Number of columns in the observation window
+GA_POPULATION_SIZE = 5  # Population size for genetic algorithm
+GA_NUM_ITERATION = 3  # Number of iterations for genetic evolution
+GA_NUM_MOST_FIT_FOR_ITER = 2  # Number of most fit individuals retained per iteration
+GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER = 0.20  # % of the population undergo mutation
 
 
-DATASET_ROW = 3
-DATASET_COLUMN = 30
-NUM_TOTAL_RANGES = int((DATASET_ROW / AGENT_WINDOW_ROW) * (DATASET_COLUMN/AGENT_WINDOW_COLUMN))
-
-
-# ASSERTIONS
+# Ensure hyperparameter constraints
 assert 0 < BATCH_SIZE <= REPLAY_MEMORY_SIZE, "batch size must be in the range of 0 to the size of replay memory."
 assert ALPHA > 0, "alpha must be greater than 0."
 assert 0 <= GAMMA <= 1, "gamma must be in the range of 0 to 1."
@@ -42,16 +53,21 @@ assert 0 <= DELTA <= EPSILON, "delta must be in the range of 0 to epsilon."
 assert 0 < DECREMENT_ITERATION, "decrement iteration must be greater than 0."
 
 
-# PATHS
+# ===========================
+# File Paths Configuration
+# ===========================
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+# Dataset Paths
 BASE_DATASETS_PATH = os.path.join(PROJECT_ROOT, "datasets")
 FASTA_FILES_PATH = os.path.join(BASE_DATASETS_PATH, "fasta_files")
 TRAINING_DATASET_PATH = os.path.join(BASE_DATASETS_PATH, "training_dataset")
 INFERENCE_DATASET_PATH = os.path.join(BASE_DATASETS_PATH, "inference_dataset")
 
+# Model Weights Path
 DPAMSA_WEIGHTS_PATH = os.path.join(PROJECT_ROOT, "DPAMSA", "weights")
 
+# Results Paths
 BASE_RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 REPORTS_PATH = os.path.join(BASE_RESULTS_PATH, "reports")
 DPAMSA_REPORTS_PATH = os.path.join(REPORTS_PATH, "DPAMSA")
@@ -83,7 +99,9 @@ for path in REQUIRED_DIRECTORIES:
         os.makedirs(path)
 
 
-# TOOLS
+# ===========================
+# External MSA Tools Configuration
+# ===========================
 TOOLS = {
     'ClustalOmega': {
         'command': lambda file_path, output_dir: ['clustalo', '-i', file_path, '-o', output_dir],

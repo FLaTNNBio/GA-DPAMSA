@@ -1,118 +1,343 @@
-import config
 import glob
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import random
-import seaborn as sns
 import subprocess
 from tqdm import tqdm
+
+import config
 from DPAMSA.env import Environment
-from config import CSV_PATH, INFERENCE_CSV_PATH, CHARTS_PATH, TOOLS, GA_DPAMSA_INF_CSV_PATH, DPAMSA_INF_CSV_PATH
-from mainGA import inference as ga_inference
 from DPAMSA.main import inference as dpamsa_inference
+from mainGA import inference as ga_inference
+
+"""
+DPAMSA Utility Functions
+
+This script provides various utilities for:
+- Genetic Algorithm (GA) operations for selecting sub-boards.
+- Benchmarking and evaluation of MSA methods.
+- Running inference using GA-DPAMSA and DPAMSA models.
+- Generating plots to visualize performance.
+
+Author: https://github.com/FLaTNNBio/GA-DPAMSA
+"""
 
 
-# --------
-# GA UTILS
-# --------
+# ===========================
+# Genetic Algorithm (GA) Utilities
+# ===========================
 def is_overlap(range1, range2):
+    """
+    Check if two sub-board regions overlap.
+
+    This function determines whether two rectangular regions (sub-boards)
+    intersect based on their row and column coordinates.
+
+    Parameters:
+    -----------
+    - range1 (tuple): Coordinates of the first sub-board in the format (row_start, row_end, col_start, col_end).
+    - range2 (tuple): Coordinates of the second sub-board in the format (row_start, row_end, col_start, col_end).
+
+    Returns:
+    --------
+    - bool: True if the two sub-boards overlap, False otherwise.
+
+    Example:
+    --------
+    >>> is_overlap((0, 3, 0, 3), (2, 5, 2, 5))
+    True
+    >>> is_overlap((0, 2, 0, 2), (3, 5, 3, 5))
+    False
+    """
+    # Extract row and column boundaries
     from_row1, to_row1, from_column1, to_column1 = range1
     from_row2, to_row2, from_column2, to_column2 = range2
 
-    # Check overlap
+    # Check if the sub-boards overlap in both rows and columns
     overlap_row = from_row1 < to_row2 and to_row1 > from_row2
     overlap_column = from_column1 < to_column2 and to_column1 > from_column2
 
     return overlap_row and overlap_column
 
 
-#TODO: can generate error in case the sub-board is not a multiple of the main-board in terms of number of row and column
-#Possibile fix: controllare to_column con il valore effettivo del numero di colonne, se to_column >, allora to_column diventa pari al numero di colonne totali della board
-def get_sum_of_pairs(chromosome,from_row,to_row,from_column,to_column):
+def get_sum_of_pairs(chromosome, from_row, to_row, from_column, to_column):
+    """
+    Compute the Sum-of-Pairs (SP) score for a given sub-board in an MSA alignment.
+
+    The SP score evaluates how well nucleotides are aligned in a subsection of an
+    MSA matrix by comparing all possible pairs of symbols within each column.
+
+    Parameters:
+    -----------
+    - chromosome (list of lists): The MSA alignment matrix, where each row represents a sequence and each column represents an aligned position.
+    - from_row (int): Starting row index of the sub-board.
+    - to_row (int): Ending row index (exclusive) of the sub-board.
+    - from_column (int): Starting column index of the sub-board.
+    - to_column (int): Ending column index (exclusive) of the sub-board.
+
+    Returns:
+    --------
+    - int: The computed Sum-of-Pairs (SP) score for the selected sub-board.
+
+    Scoring System:
+    ---------------
+    - **Gap (`5`)** → Adds `config.GAP_PENALTY`
+    - **Exact match** → Adds `config.MATCH_REWARD`
+    - **Mismatch** → Adds `config.MISMATCH_PENALTY`
+
+    Example:
+    --------
+    >>> chromosome = [
+    ...     [1, 2, 3, 5],  # A, T, C, -
+    ...     [1, 2, 4, 5],  # A, T, G, -
+    ...     [1, 3, 3, 5]   # A, C, C, -
+    ... ]
+    >>> get_sum_of_pairs(chromosome, 0, 3, 0, 4)
+    (Computes SP score for the entire matrix)
+    """
     score = 0
+
+    # Iterate over all columns in the sub-board
     for i in range(from_column, to_column):
-        for j in range(from_row,to_row):
+        # Compare all sequence pairs in the column
+        for j in range(from_row, to_row):
             for k in range(j + 1, to_row):
                 if chromosome[j][i] == 5 or chromosome[k][i] == 5:
-                    score += config.GAP_PENALTY
+                    score += config.GAP_PENALTY  # Penalize gaps
                 elif chromosome[j][i] == chromosome[k][i]:
-                    score += config.MATCH_REWARD
+                    score += config.MATCH_REWARD  # Reward matches
                 elif chromosome[j][i] != chromosome[k][i]:
-                    score += config.MISMATCH_PENALTY
+                    score += config.MISMATCH_PENALTY  # Penalize mismatches
+
     return score
 
 
 def get_column_score(chromosome, from_row, to_row, from_column, to_column):
-    # Numero di colonne considerate
-    M = to_column - from_column
+    """
+    Compute the Column Score (CS) for a given sub-board in an MSA alignment.
 
-    # Contatore delle colonne con tutti i valori uguali
-    uniform_columns_count = 0
+    The CS metric evaluates how well nucleotides are aligned by measuring the fraction
+    of columns where all sequences (rows) contain the same nucleotide.
 
-    # Itera sulle colonne
-    for col in range(from_column, to_column):
-        # Estrai i valori della colonna corrente (col) per le righe nel range [from_row, to_row)
-        col_values = [chromosome[row][col] for row in range(from_row, to_row)]
+    Parameters:
+    -----------
+    - chromosome (list of lists): The MSA alignment matrix, where each row represents
+                                  a sequence and each column represents an aligned position.
+    - from_row (int): Starting row index of the sub-board.
+    - to_row (int): Ending row index (exclusive) of the sub-board.
+    - from_column (int): Starting column index of the sub-board.
+    - to_column (int): Ending column index (exclusive) of the sub-board.
 
-        # Se tutti i valori sono uguali, incrementa il contatore
-        if all(value == col_values[0] for value in col_values):
-            uniform_columns_count += 1
+    Returns:
+    --------
+    - float: The fraction of fully matched columns within the selected sub-board.
+             If no columns are present, returns 0.
 
-    # Restituisci la media (normalizzata su M)
-    return uniform_columns_count / M if M > 0 else 0
+    Example:
+    --------
+    >>> chromosome = [
+    ...     [1, 2, 3, 3],  # A, T, C, C
+    ...     [1, 2, 3, 3],  # A, T, C, C
+    ...     [1, 2, 3, 3]   # A, T, C, C
+    ... ]
+    >>> get_column_score(chromosome, 0, 3, 0, 4)
+    1.0  # All columns are fully matched
+
+    >>> chromosome = [
+    ...     [1, 2, 3, 4],  # A, T, C, G
+    ...     [1, 2, 3, 3],  # A, T, C, C
+    ...     [1, 2, 3, 3]   # A, T, C, C
+    ... ]
+    >>> get_column_score(chromosome, 0, 3, 0, 4)
+    0.75  # 3 out of 4 columns are fully matched
+    """
+    # Number of columns in the selected sub-board
+    num_columns = to_column - from_column
+
+    # Count the number of columns where all sequences (rows) have the same value
+    uniform_columns = sum(
+        1 for col in range(from_column, to_column)
+        if all(chromosome[row][col] == chromosome[from_row][col] for row in range(from_row, to_row))
+    )
+
+    # Return fraction of fully matched columns (avoid division by zero)
+    return uniform_columns / num_columns if num_columns > 0 else 0
+
 
 def check_overlap(new_range,used_ranges):
+    """
+    Check if a new sub-board range overlaps with any previously used ranges.
+
+    This function is used to ensure that newly selected sub-boards do not
+    overlap with already chosen sub-boards.
+
+    Parameters:
+    -----------
+    - new_range (tuple): The new sub-board range in the format
+                         (row_start, row_end, col_start, col_end).
+    - used_ranges (list of tuples): List of previously used sub-board ranges,
+                                     each in the format (row_start, row_end, col_start, col_end).
+
+    Returns:
+    --------
+    - bool: True if `new_range` overlaps with any range in `used_ranges`, False otherwise.
+
+    Example:
+    --------
+    >>> used_ranges = [(0, 3, 0, 3), (4, 7, 4, 7)]
+    >>> check_overlap((2, 5, 2, 5), used_ranges)
+    True  # Overlaps with (0, 3, 0, 3)
+
+    >>> check_overlap((7, 9, 7, 9), used_ranges)
+    False  # No overlap with any existing range
+    """
     for existing_range in used_ranges:
         if is_overlap(new_range, existing_range):
-            return True  # range overlap
-    return False  # no overlap
+            return True  # Overlap detected
+    return False  # No overlap found
 
 
-def get_all_different_sub_range(individual,m_prime,n_prime):
-    m = len(individual)
-    #give as n the minimum length of a sequence, this in case we have to align sequence of different size
+def get_all_different_sub_range(individual, m_prime=config.AGENT_WINDOW_ROW, n_prime=config.AGENT_WINDOW_COLUMN):
+    """
+    Generate all unique, non-overlapping sub-boards of fixed size from an MSA alignment.
+
+    This function extracts subsections (sub-boards) of size (m_prime, n_prime)
+    from the main alignment matrix while ensuring:
+    - No overlapping sub-boards.
+    - Only valid sub-boards within sequence boundaries are selected.
+    - Sequences with different lengths are handled by considering the shortest sequence.
+
+    Parameters:
+    -----------
+    - individual (list of lists): The MSA alignment matrix, where each row represents
+                                  a sequence and each column represents an aligned position.
+    - m_prime (int): Number of rows in the sub-board (agent window row size).
+    - n_prime (int): Number of columns in the sub-board (agent window column size).
+
+    Returns:
+    --------
+    - list of tuples: A list of non-overlapping sub-boards, each represented as
+                      (from_row, to_row, from_column, to_column).
+
+    Example:
+    --------
+    >>> individual = [
+    ...     [1, 2, 3, 4, 5],  # A, T, C, G, -
+    ...     [1, 2, 3, 4, 5],  # A, T, C, G, -
+    ...     [1, 2, 3, 4, 5]   # A, T, C, G, -
+    ... ]
+    >>> get_all_different_sub_range(individual, 2, 2)
+    [(0, 2, 0, 2), (0, 2, 2, 4), (1, 3, 0, 2), (1, 3, 2, 4)]
+    """
+    m = len(individual) # Total number of sequences (rows)
+
+    # Find the shortest sequence length to handle variable-length sequences
     n = min(len(genes) for genes in individual)
 
-    m_prime = config.AGENT_WINDOW_ROW
-    n_prime = config.AGENT_WINDOW_COLUMN
-
-    #Calculate all the possible sub-board of size m_prime, n_prime from the main board
+    # List to store unique, non-overlapping sub-boards
     unique_ranges = []
+
+    # Iterate over all possible starting positions for sub-boards
     for i in range(m):
         for j in range(n):
-            from_row = i 
+            from_row = i
             to_row = i + m_prime
             from_column = j
             to_column = j + n_prime
-            #Check if the range is a range already covered by another interval (we want all different sub-board)
-            if(check_overlap((from_row,to_row,from_column,to_column),unique_ranges) == False):
-                                #we want only equal range, if we create gaps and the board is if we create gap and the board is not partitionable, we only take the largest number of sub-boards of the same size as the board on which the algorithm was trained
-                        if not (to_row > m or to_column > n):    
-                            unique_ranges.append((from_row,to_row,from_column,to_column))
+
+            # Ensure the sub-board does not overlap with previously selected ones
+            if not check_overlap((from_row, to_row, from_column, to_column), unique_ranges):
+                # Ensure the sub-board is within valid sequence boundaries
+                if to_row <= m and to_column <= n:
+                    unique_ranges.append((from_row, to_row, from_column, to_column))
     
     return unique_ranges
 
 
 def calculate_worst_fitted_sub_board(individual):
-    #Get all the possible sub-board from the individual (the main board)
+    """
+    Identify the worst-performing sub-board in an MSA alignment.
+
+    This function finds the sub-board (sub-section of the alignment matrix)
+    that has the lowest Sum-of-Pairs (SP) score, indicating poor alignment quality.
+
+    Parameters:
+    -----------
+    - individual (list of lists): The full MSA alignment matrix, where each row
+                                  represents a sequence and each column represents
+                                  an aligned position.
+
+    Returns:
+    --------
+    - tuple: A tuple containing:
+        - int: The lowest SP score (worst alignment quality).
+        - tuple: Coordinates of the worst sub-board in the format
+                 (from_row, to_row, from_column, to_column).
+
+    Example:
+    --------
+    >>> individual = [
+    ...     [1, 2, 3, 3, 5],  # A, T, C, C, -
+    ...     [1, 2, 4, 3, 5],  # A, T, G, C, -
+    ...     [1, 3, 3, 3, 5]   # A, C, C, C, -
+    ... ]
+    >>> calculate_worst_fitted_sub_board(individual)
+    (-10, (0, 2, 2, 4))  # Example output (score, coordinates)
+    """
+    # Get all possible non-overlapping sub-boards
     unique_ranges = get_all_different_sub_range(individual,config.AGENT_WINDOW_ROW,config.AGENT_WINDOW_COLUMN)
     sub_board_score = []
 
-    #For every sub-board, calculate che sum of pair
-    for from_row,to_row,from_column,to_column in unique_ranges:
-        score = get_sum_of_pairs(individual,from_row,to_row, from_column, to_column)
-        sub_board_score.append(((score),(from_row,to_row,from_column,to_column)))
+    # Compute SP score for each sub-board
+    for from_row, to_row, from_column, to_column in unique_ranges:
+        score = get_sum_of_pairs(individual, from_row, to_row, from_column, to_column)
+        sub_board_score.append((score, (from_row, to_row, from_column, to_column)))
     
-    #Find the sub-board with the worst sum-of-pairs score
+    # Identify the sub-board with the worst alignment (lowest SP score)
     worst_score_subboard = min(sub_board_score, key=lambda x: x[0])
 
     return worst_score_subboard
 
 
-#Function for generate a list of num_random_el elements of different random number
 def casual_number_generation(start_range, final_range, num_random_el):
+    """
+    Generate a list of unique random numbers within a given range.
+
+    This function ensures that the generated numbers:
+    - Are unique (no duplicates).
+    - Are within the specified range [start_range, final_range].
+    - Have exactly `num_random_el` elements.
+
+    Parameters:
+    -----------
+    - start_range (int): The minimum value (inclusive) of the random range.
+    - final_range (int): The maximum value (inclusive) of the random range.
+    - num_random_el (int): The number of unique random elements to generate.
+
+    Returns:
+    --------
+    - list: A list of `num_random_el` unique random numbers.
+
+    Raises:
+    -------
+    - ValueError: If `num_random_el` is larger than the possible unique values in the range.
+
+    Example:
+    --------
+    >>> casual_number_generation(1, 10, 5)
+    [3, 7, 1, 9, 5]  # Example output (random)
+
+    >>> casual_number_generation(1, 5, 6)
+    ValueError: Cannot generate 6 unique numbers in range 1-5.
+    """
+    # Ensure the requested number of elements is within the possible range
+    if num_random_el > (final_range - start_range + 1):
+        raise ValueError(f"Cannot generate {num_random_el} unique numbers in range {start_range}-{final_range}.")
+
     generated_number = set()
+
+    # Generate unique random numbers until the required count is reached
     while len(generated_number) < num_random_el:
         num = random.randint(start_range, final_range)
         generated_number.add(num)
@@ -120,68 +345,185 @@ def casual_number_generation(start_range, final_range, num_random_el):
     return list(generated_number)
 
 
-#Return the first num_individuals individuals with the worst score
-def get_index_of_the_worst_fitted_individuals(population_sorted,num_individuals):
-    #Sort the population based on the score
+def get_index_of_the_worst_fitted_individuals(population_sorted, num_individuals):
+    """
+    Identify the worst-fitted individuals in a genetic algorithm (GA) population.
+
+    This function selects the indices of individuals with the lowest fitness scores,
+    allowing genetic operations (e.g., mutation, replacement) to focus on them.
+
+    Parameters:
+    -----------
+    - population_sorted (list of tuples): A sorted population, where each individual is
+                                          represented as (index, fitness_score).
+    - num_individuals (int): The number of worst-fitted individuals to extract.
+
+    Returns:
+    --------
+    - list: A list of indices corresponding to the worst-fitted individuals.
+
+    Example:
+    --------
+    >>> population = [(0, 10), (1, 5), (2, 8), (3, 3), (4, 7)]
+    >>> get_index_of_the_worst_fitted_individuals(population, 2)
+    [3, 1]  # Indices of individuals with the lowest fitness scores
+
+    >>> get_index_of_the_worst_fitted_individuals(population, 3)
+    [3, 1, 4]
+    """
+    # Sort population by fitness score (ascending order)
     population_score_sorted = sorted(population_sorted, key=lambda x: x[1])
-    #Get the index of the worst fitted individuals
+
+    # Extract indices of the worst-fitted individuals
     worst_fitted_individual = [item[0] for item in population_score_sorted[:num_individuals]]
     
     return worst_fitted_individual
 
 
-#Return the first num_individuals individuals with the worst score
-def get_index_of_the_best_fitted_individuals(population_sorted,num_individuals):
-    #Sort the population based on the score
+def get_index_of_the_best_fitted_individuals(population_sorted, num_individuals):
+    """
+    Identify the best-fitted individuals in a genetic algorithm (GA) population.
+
+    This function selects the indices of individuals with the highest fitness scores,
+    allowing genetic operations (e.g., selection, crossover, elitism) to prioritize them.
+
+    Parameters:
+    -----------
+    - population_sorted (list of tuples): A sorted population, where each individual is
+                                          represented as (index, fitness_score).
+    - num_individuals (int): The number of best-fitted individuals to extract.
+
+    Returns:
+    --------
+    - list: A list of indices corresponding to the best-fitted individuals.
+
+    Example:
+    --------
+    >>> population = [(0, 10), (1, 5), (2, 8), (3, 3), (4, 7)]
+    >>> get_index_of_the_best_fitted_individuals(population, 2)
+    [0, 2]  # Indices of individuals with the highest fitness scores
+
+    >>> get_index_of_the_best_fitted_individuals(population, 3)
+    [0, 2, 4]
+    """
+    # Sort population by fitness score (descending order → best fitness first)
     population_score_sorted = sorted(population_sorted, key=lambda x: x[1],reverse=True)
-    #Get the index of the best fitted individuals
+
+    # Extract indices of the best-fitted individuals
     best_fitted_individual = [item[0] for item in population_score_sorted[:num_individuals]]
     
     return best_fitted_individual
 
 
-def check_if_there_are_all_gaps(row,from_index):
+def check_if_there_are_all_gaps(row, from_index):
+    """
+    Check if all elements from `from_index` to the end of the row are gaps (5).
+
+    If all elements are gaps, return the `from_index` as the position where
+    gaps start. Otherwise, return False.
+
+    Parameters:
+    -----------
+    - row (list): The sequence row (a list of integers representing nucleotides or gaps).
+    - from_index (int): The starting index for checking gaps.
+
+    Returns:
+    --------
+    - int: The index where gaps start if all elements from `from_index` onward are gaps.
+    - bool: False if there is any non-gap element in the range.
+
+    Example:
+    --------
+    >>> check_if_there_are_all_gaps([1, 2, 5, 5, 5], 2)
+    2  # Gaps start at index 2
+
+    >>> check_if_there_are_all_gaps([1, 2, 5, 4, 5], 2)
+    False  # A non-gap element is found
+    """
     for i in range(from_index, len(row)):
         if row[i] != 5:
-            return False    
-    return from_index - 1
+            return False  # Found a non-gap character
+
+    return from_index  # Return the index where gaps start
 
 
 def clean_unnecessary_gaps(aligned_sequence):
+    """
+    Remove trailing columns that contain only gaps (5) in an MSA alignment.
+
+    This function scans each row to find the rightmost column where gaps start
+    and trims unnecessary trailing gaps.
+
+    Parameters:
+    -----------
+    - aligned_sequence (list of lists): The MSA alignment matrix, where each row
+                                        represents a sequence.
+
+    Returns:
+    --------
+    - None: The function modifies `aligned_sequence` in place.
+
+    Example:
+    --------
+    >>> aligned_sequence = [
+    ...     [1, 2, 3, 5, 5],  # A, T, C, -, -
+    ...     [1, 2, 3, 5, 5],  # A, T, C, -, -
+    ...     [1, 2, 3, 5, 5]   # A, T, C, -, -
+    ... ]
+    >>> clean_unnecessary_gaps(aligned_sequence)
+    >>> print(aligned_sequence)
+    [[1, 2, 3], [1, 2, 3], [1, 2, 3]]  # Gaps removed
+    """
     indexes_to_start_clean = []
-    for index_el,row in enumerate(aligned_sequence):
-        for index_col,el in enumerate(row):
-            if el == 5:
-                result = check_if_there_are_all_gaps(row,index_col + 1)
-                if result != False:
-                    indexes_to_start_clean.append(result)
-                    break
-    try:
-        index_to_start = max(indexes_to_start_clean)
+
+    for row in aligned_sequence:
+        for index_col, el in enumerate(row):
+            if el == 5:  # Check if current element is a gap
+                result = check_if_there_are_all_gaps(row, index_col + 1)
+                if result:  # If all remaining elements are gaps, store index
+                    indexes_to_start_clean.append(index_col)
+                    break  # Move to next row
+
+    if indexes_to_start_clean:
+        index_to_start = max(indexes_to_start_clean)  # Rightmost starting point
         for row in aligned_sequence:
-            del row[index_to_start:len(row)]
-    except:
-        return
-    ''' This is util for the mainGA to get the sub board in the correct way and also for replace after the mutation
-    row_genes = individual[from_row:to_row]
-    for genes in row_genes:
-        sub_genes = genes[from_column:to_column]      
-        sub_board.append(sub_genes)
-
-    all_sub_board.append(sub_board)
-    '''    
+            del row[index_to_start:]  # Remove trailing gaps
 
 
-# ------------------
-# BENCHMARKING UTILS
-# ------------------
+# ===========================
+# Benchmarking Utilities
+# ===========================
 def calculate_metrics(env):
+    """
+    Compute key evaluation metrics for a Multiple Sequence Alignment (MSA).
 
-    alignment_length = len(env.aligned[0])
-    num_sequences = len(env.aligned)
-    sp_score = env.calc_score()
-    exact_matches = env.calc_exact_matched()
-    column_score = exact_matches / alignment_length
+    This function extracts alignment statistics from the given environment (`env`)
+    and calculates various alignment quality measures.
+
+    Parameters:
+    -----------
+    - env (Environment): An instance of the MSA environment, containing aligned sequences.
+
+    Returns:
+    --------
+    - dict: A dictionary containing the following metrics:
+        - "AL" (int): Alignment Length (number of columns in the aligned sequences).
+        - "QTY" (int): Number of sequences in the alignment.
+        - "SP" (float): Sum-of-Pairs (SP) score, measuring sequence similarity.
+        - "EM" (int): Number of fully matched columns (Exact Matches).
+        - "CS" (float): Column Score (fraction of exact match columns).
+
+    Example:
+    --------
+    >>> env = Environment(["ATCG", "AT-G", "ATGG"])  # Example MSA environment
+    >>> calculate_metrics(env)
+    {'AL': 4, 'QTY': 3, 'SP': 12, 'EM': 2, 'CS': 0.5}
+    """
+    alignment_length = len(env.aligned[0])  # Number of columns in the alignment
+    num_sequences = len(env.aligned)  # Total number of sequences
+    sp_score = env.calc_score()  # Sum-of-Pairs score
+    exact_matches = env.calc_exact_matched()  # Number of fully matched columns
+    column_score = exact_matches / alignment_length  # Fraction of exact match columns
 
     return {
         "AL": alignment_length,
@@ -193,19 +535,46 @@ def calculate_metrics(env):
 
 
 def parse_fasta_to_sequences(fasta_content):
-    sequences = []
-    current_sequence = []
+    """
+    Extract sequences from a FASTA-formatted string.
 
+    This function processes a FASTA file/string, extracting and concatenating sequences
+    while ignoring headers (lines starting with '>').
+
+    Parameters:
+    -----------
+    - fasta_content (str): The content of a FASTA file as a single string.
+
+    Returns:
+    --------
+    - list of str: A list of extracted sequences, where each sequence is a continuous string.
+
+    Example:
+    --------
+    >>> fasta_data =
+    >seq1
+    ATCGGCTA
+    >seq2
+    TTAGCCCTA
+
+    >>> parse_fasta_to_sequences(fasta_data)
+    ['ATCGGCTA', 'TTAGCCCTA']
+    """
+    sequences = []  # Stores extracted sequences
+    current_sequence = []  # Remove leading/trailing whitespace
+
+    # Process each line in the FASTA file
     for line in fasta_content.splitlines():
-        line = line.strip()
-        if line.startswith(">"):
-            if current_sequence:
-                sequences.append(''.join(current_sequence))
-                current_sequence = []
-        else:
-            current_sequence.append(line)
+        line = line.strip()  # Remove leading/trailing whitespace
 
-    # Aggiungi l'ultima sequenza se presente
+        if line.startswith(">"):  # Sequence identifier line
+            if current_sequence:
+                sequences.append(''.join(current_sequence))  # Save previous sequence
+                current_sequence = []  # Reset for new sequence
+        else:
+            current_sequence.append(line)  # Collect sequence lines
+
+    # Add the last sequence if it exists
     if current_sequence:
         sequences.append(''.join(current_sequence))
 
@@ -213,28 +582,75 @@ def parse_fasta_to_sequences(fasta_content):
 
 
 def display_menu():
+    """
+    Display a selection menu for benchmarking different MSA methods.
 
-    print("Seleziona l'opzione per il benchmarking:")
+    This function prompts the user to select a benchmarking comparison, ensuring
+    valid input (1, 2, or 3) before returning the choice.
+
+    Options:
+    --------
+    1. GA-DPAMSA vs DPAMSA
+    2. GA-DPAMSA vs Other MSA Tools
+    3. GA-DPAMSA vs DPAMSA vs Other MSA Tools
+
+    Returns:
+    --------
+    - int: The user's selected option (1, 2, or 3).
+
+    Example:
+    --------
+    >>> choice = display_menu()
+    Select the benchmarking option:
+    1. GA-DPAMSA vs DPAMSA
+    2. GA-DPAMSA vs Other MSA Tools
+    3. GA-DPAMSA vs DPAMSA vs Other MSA Tools
+    Enter your choice (1, 2, or 3): 2
+    >>> print(choice)
+    2  # User selected option 2
+    """
+    print("Select the benchmarking option:")
     print("1. GA-DPAMSA vs DPAMSA")
-    print("2. GA-DPAMSA vs Tools")
-    print("3. GA-DPAMSA vs DPAMSA vs Tools")
+    print("2. GA-DPAMSA vs Other MSA Tools")
+    print("3. GA-DPAMSA vs DPAMSA vs Other MSA Tools")
 
     while True:
         try:
-            choice = int(input("Inserisci il numero della tua scelta (1, 2, 3): "))
+            # Request user input and convert to an integer
+            choice = int(input("Enter your choice (1, 2, or 3): "))
+
+            # Validate input (must be 1, 2, or 3)
             if choice in [1, 2, 3]:
                 return choice
             else:
-                print("Seleziona un'opzione valida (1, 2, 3).")
+                print("Please select a valid option (1, 2, or 3).")
         except ValueError:
-            print("Input non valido. Inserisci un numero.")
+            print("Invalid input. Please enter a number.")
 
 
 def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
-    tool_info = TOOLS[tool_name]
+    """
+    Run an external MSA tool, process its alignment output, and generate a benchmarking report.
 
+    This function executes the specified MSA tool on a set of FASTA files, extracts the
+    aligned sequences, computes evaluation metrics, and generates a report.
+
+    Parameters:
+    -----------
+    - tool_name (str): The name of the MSA tool (must be in `config.TOOLS`).
+    - file_paths (list of str): List of paths to input FASTA files.
+    - dataset_name (str): Name of the dataset (used for organizing output files).
+
+    Returns:
+    --------
+    - list of lists: A list containing alignment evaluation metrics for each processed file.
+
+    Each entry is a list with: [file_name, AL (Alignment Length), QTY (Number of Sequences), SP (Sum of Pairs Score), EM (Exact Matches), CS (Column Score)].
+    """
+    tool_info = config.TOOLS[tool_name]
+
+    # Create necessary directories for output and reports
     os.makedirs(tool_info['output_dir'], exist_ok=True)
-    # Creazione delle directory per il report e per l'output specifico del dataset
     dataset_output_dir = os.path.join(tool_info['output_dir'], dataset_name)
     os.makedirs(dataset_output_dir, exist_ok=True)
     os.makedirs(tool_info['report_dir'], exist_ok=True)
@@ -248,13 +664,13 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
             file_name_no_ext = os.path.splitext(file_name)[0]
             command = tool_info['command'](file_path, os.path.join(dataset_output_dir, file_name))
 
-            # Esecuzione del comando
-            if tool_name == 'MAFFT':
+            # Execute the tool's command
+            if tool_name == 'MAFFT':  # Tool specific execution
                 subprocess.run(command, shell=True, stderr=subprocess.DEVNULL, text=True)
             else:
                 subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
 
-            # Gestione specifica dell'output path per UPP e PASTA
+            # Handle specific output paths for UPP and PASTA
             if tool_name == 'UPP':
                 output_path = os.path.join(dataset_output_dir, file_name, "output_alignment.fasta")
             elif tool_name == 'PASTA':
@@ -262,23 +678,23 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
             else:
                 output_path = os.path.join(dataset_output_dir, file_name)
 
-            # Lettura dell'output (da file o da stdout)
+            # Read the tool's output (either from file or stdout)
             if os.path.exists(output_path):
                 with open(output_path, 'r') as f:
                     fasta_content = f.read()
             else:
                 fasta_content = subprocess.run(command, stdout=subprocess.PIPE, text=True).stdout
 
-            # Parsing del contenuto FASTA per ottenere le sequenze
+            # Parse FASTA content to get aligned sequences
             aligned_seqs = parse_fasta_to_sequences(fasta_content)
 
-            # Calcolo delle metriche con Environment
+            # Compute alignment metrics using Environment
             env = Environment(aligned_seqs, convert_data=False)
             Environment.set_alignment(env, aligned_seqs)
 
             metrics = calculate_metrics(env)
 
-            # Scrittura del report con tutte le metriche
+            # Write metrics to report
             report.write(f"File: {file_name}\n")
             report.write(f"Alignment Length (AL): {metrics['AL']}\n")
             report.write(f"Number of Sequences (QTY): {metrics['QTY']}\n")
@@ -287,13 +703,13 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
             report.write(f"Column Score (CS): {metrics['CS']:.3f}\n")
             report.write(f"Alignment:\n{env.get_alignment()}\n\n")
 
-            # Aggiunta dei risultati per il CSV (con tutte le metriche)
+            # Store results for CSV export
             csv_results.append([
                 file_name, metrics['AL'], metrics['QTY'],
                 metrics['SP'], metrics['EM'], metrics['CS']
             ])
 
-            # Rimozione dei file .dnd generati da ClustalW
+            # Remove ClustalW .dnd files (temporary files used during alignment)
             if tool_name == 'ClustalW':
                 dnd_files = glob.glob(os.path.join(os.path.dirname(file_path), '*.dnd'))
                 for dnd_file in dnd_files:
@@ -303,73 +719,148 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
 
 
 def save_inference_csv(csv_data, tool_name, dataset_name):
-    # Percorso dove salvare il CSV per il tool specifico
+    """
+    Save inference results to a CSV file for later analysis.
+
+    This function stores benchmarking results, ensuring that alignment evaluation
+    metrics are saved for different MSA tools.
+
+    Parameters:
+    -----------
+    - csv_data (list of lists or str): If a list, it contains the alignment evaluation
+                                       metrics. If a string, it represents the path
+                                       to an existing CSV file.
+    - tool_name (str): The name of the MSA tool (used to organize results).
+    - dataset_name (str): The dataset name (used for naming the output file).
+
+    Returns:
+    --------
+    - str: The file path of the saved CSV file.
+
+    Example:
+    --------
+    >>> csv_data = [
+    ...     ["dataset1.fasta", 150, 5, 120, 50, 0.65],
+    ...     ["dataset2.fasta", 140, 4, 110, 45, 0.60]
+    ... ]
+    >>> save_inference_csv(csv_data, "ClustalW", "Dataset1")
+    'path/to/csv/ClustalW/Dataset1_ClustalW_results.csv'
+    """
+    # Directory where the CSV will be stored
     tool_csv_dir = os.path.join(config.CSV_PATH, tool_name)
     os.makedirs(tool_csv_dir, exist_ok=True)
 
-    # Nome del file CSV
+    # Define CSV file name
     csv_file_path = os.path.join(tool_csv_dir, f"{dataset_name}_{tool_name}_results.csv")
 
-    # Se csv_data è una lista di liste (come generato da run_tool_and_generate_report)
+    # Convert input data to DataFrame if necessary
     if isinstance(csv_data, list):
         columns = ["File Name", "Alignment Length (AL)",
                    "Number of Sequences (QTY)", "Sum of Pairs (SP)",
                    "Exact Matches (EM)", "Column Score (CS)"]
         df = pd.DataFrame(csv_data, columns=columns)
     else:
-        # Se è già un DataFrame
+        # If csv_data is a CSV file path, load it as a DataFrame
         df = pd.read_csv(csv_data)
 
+    # Save DataFrame to CSV
     df.to_csv(csv_file_path, index=False)
-    return csv_file_path  # Restituisce il path per aggiungerlo al dizionario
+
+    return csv_file_path  # Return the file path for tracking
 
 
 def run_ga_dpamsa_inference(dataset, dataset_name, model_path):
+    """
+    Run inference using GA-DPAMSA and return the results CSV file path.
 
+    This function executes GA-DPAMSA (Genetic Algorithm-enhanced DPAMSA) on a given
+    dataset using a specified trained model, then returns the path to the CSV file
+    containing alignment evaluation metrics.
+
+    Parameters:
+    -----------
+    - dataset (module): The dataset module containing sequences to be aligned.
+    - dataset_name (str): The name of the dataset (used for naming output files).
+    - model_path (str): Path to the trained GA-DPAMSA model.
+
+    Returns:
+    --------
+    - str: Path to the CSV file where inference results are saved.
+    """
+    # Run GA-DPAMSA inference
     ga_inference(dataset=dataset, model_path=model_path, truncate_file=True)
-    return os.path.join(GA_DPAMSA_INF_CSV_PATH, f"{dataset_name}_GA_DPAMSA_results.csv")
+
+    # Construct and return the CSV results file path
+    return os.path.join(config.GA_DPAMSA_INF_CSV_PATH, f"{dataset_name}_GA_DPAMSA_results.csv")
 
 
 def run_dpamsa_inference(dataset, dataset_name, model_path):
+    """
+    Run inference using DPAMSA and return the results CSV file path.
 
+    This function executes DPAMSA (Deep reinforcement learning-based MSA) on a given
+    dataset using a specified trained model, then returns the path to the CSV file
+    containing alignment evaluation metrics.
+
+    Parameters:
+    -----------
+    - dataset (module): The dataset module containing sequences to be aligned.
+    - dataset_name (str): The name of the dataset (used for naming output files).
+    - model_path (str): Path to the trained DPAMSA model.
+
+    Returns:
+    --------
+    - str: Path to the CSV file where inference results are saved.
+    """
+    # Run DPAMSA inference
     dpamsa_inference(dataset=dataset, model_path=model_path, truncate_file=True)
-    return os.path.join(DPAMSA_INF_CSV_PATH, f"{dataset_name}_DPAMSA_results.csv")
+
+    # Construct and return the CSV results file path
+    return os.path.join(config.DPAMSA_INF_CSV_PATH, f"{dataset_name}_DPAMSA_results.csv")
 
 
-# ------------------
-# DATA VIZ UTILS
-# ------------------
-import matplotlib.pyplot as plt
-import pandas as pd
-import os
-
-
+# ===========================
+# Data Visualization Utilities
+# ===========================
 def plot_metrics(tool_csv_paths, dataset_name):
+    """
+    Generate visualizations comparing MSA tool performance.
+
+    This function reads CSV result files for different MSA tools, extracts evaluation metrics,
+    and generates box plots (for distribution) and bar plots (for mean values) of:
+    - Sum of Pairs (SP) score
+    - Column Score (CS)
+
+    Parameters:
+    -----------
+    - tool_csv_paths (dict): Dictionary mapping tool names to their result CSV file paths.
+    - dataset_name (str): Name of the dataset (used for organizing output charts).
+    """
     sum_of_pairs_data = []
     column_score_data = []
     mean_sp = {}
     mean_cs = {}
 
-    # Colori: rosso per GA-DPAMSA, azzurro per gli altri
+    # Define colors: Red for GA-DPAMSA, Cyan for other tools
     color_map = {'GA-DPAMSA': 'red'}
 
-    # Creazione della directory per i grafici del dataset
+    # Create output directory for dataset charts
     dataset_charts_dir = os.path.join(config.CHARTS_PATH, dataset_name)
     os.makedirs(dataset_charts_dir, exist_ok=True)
 
-    # Preparazione dei dati
+    # Process CSV files and extract metrics
     for tool, csv_path in tool_csv_paths.items():
         df = pd.read_csv(csv_path)
 
-        # Colori specifici
+        # Assign colors to tools
         color = 'red' if tool == 'GA-DPAMSA' else 'cyan'
         color_map[tool] = color
 
-        # Dati per il box plot
+        # Store box plot data
         sum_of_pairs_data.append((tool, df['Sum of Pairs (SP)']))
         column_score_data.append((tool, df['Column Score (CS)']))
 
-        # Dati per il bar plot (valore medio)
+        # Compute mean values for bar plots
         mean_sp[tool] = df['Sum of Pairs (SP)'].mean()
         mean_cs[tool] = df['Column Score (CS)'].mean()
 
@@ -377,21 +868,21 @@ def plot_metrics(tool_csv_paths, dataset_name):
 
     # === BOX PLOT: Sum of Pairs (SP) ===
     plt.figure(figsize=(12, 8))
-    plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)  # Linee di sfondo
+    plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
 
     boxplot = plt.boxplot(
         [data for _, data in sum_of_pairs_data],
         labels=tools,
         patch_artist=True,
         medianprops=dict(color='black', linewidth=2),
-        zorder=3  # Sovrapposizione sopra le linee di sfondo
+        zorder=3
     )
 
-    # Colora i box
+    # Apply colors to box plots
     for patch, (tool, _) in zip(boxplot['boxes'], sum_of_pairs_data):
         patch.set_facecolor(color_map[tool])
 
-    # Modifiche estetiche
+    # Aesthetics
     plt.title(f'SP Distribution results for {dataset_name}', fontsize=16, fontweight='bold')
     plt.ylabel('Sum of Pairs (SP)', fontweight='bold', fontsize=12)
     plt.xticks(fontweight='bold', fontsize=10)
@@ -413,9 +904,11 @@ def plot_metrics(tool_csv_paths, dataset_name):
         zorder=3
     )
 
+    # Apply colors to box plots
     for patch, (tool, _) in zip(boxplot['boxes'], column_score_data):
         patch.set_facecolor(color_map[tool])
 
+    # Aesthetics
     plt.title(f'CS Distribution results for {dataset_name}', fontsize=16, fontweight='bold')
     plt.ylabel('Column Score (CS)', fontweight='bold', fontsize=12)
     plt.xticks(fontweight='bold', fontsize=10)
@@ -433,16 +926,16 @@ def plot_metrics(tool_csv_paths, dataset_name):
         mean_sp.keys(),
         mean_sp.values(),
         color=[color_map[tool] for tool in mean_sp.keys()],
-        edgecolor='black', linewidth=2,  # Bordo più spesso
+        edgecolor='black', linewidth=2,
         zorder=3
     )
 
-    # Aggiunta dei valori sopra le barre
+    # Add explicit mean value to bars
     for bar in bars:
         height = bar.get_height()
         plt.text(
             bar.get_x() + bar.get_width() / 2,
-            height + (0.01 * height),  # Posiziona leggermente sopra la barra
+            height + (0.01 * height),
             f'{height:.2f}',
             ha='center',
             va='bottom',
@@ -471,13 +964,13 @@ def plot_metrics(tool_csv_paths, dataset_name):
         zorder=3
     )
 
-    # Aggiunta dei valori sopra le barre
+    # Add explicit mean value to bars
     for bar in bars:
         height = bar.get_height()
         plt.text(
             bar.get_x() + bar.get_width() / 2,
             height + (0.01 * height),
-            f'{height:.3f}',  # Più decimali per il CS
+            f'{height:.3f}',
             ha='center',
             va='bottom',
             fontweight='bold',
