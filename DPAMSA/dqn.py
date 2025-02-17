@@ -182,6 +182,8 @@ class DQN(ABC):
         loss.backward()
         self.optimizer.step()
 
+        return loss.item()  # Return the loss value as a float
+
     def save(self, filename, path=config.DPAMSA_WEIGHTS_PATH):
         """
         Save the model weights to a file.
