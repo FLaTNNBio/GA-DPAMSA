@@ -30,7 +30,8 @@ Key Features:
 - Saves results as reports and CSV files.
 - Provides an interactive menu for user selection.
 
-Author: https://github.com/ZhangLab312/DPAMSA
+Author (legacy): https://github.com/ZhangLab312/DPAMSA
+Co-Author (improved): https://github.com/FLaTNNBio/GA-DPAMSA
 """
 
 
@@ -113,6 +114,8 @@ def train(dataset=TRAINING_DATASET, start=0, end=-1, model_path='new_model_3x30'
         # Write an initial log entry so TensorBoard detects the logs immediately
         writers[name].add_scalar('Training/Loss', 0, 0)
         writers[name].add_scalar('Training/Reward', 0, 0)
+        writers[name].add_scalar('Training/Steps', 0, 0)
+        writers[name].add_scalar('Training/Epsilon', config.EPSILON, 0)
         writers[name].add_scalar('Metrics/SP', 0, 0)
         writers[name].add_scalar('Metrics/CS', 0, 0)
         writers[name].flush()  # Force immediate write to disk
@@ -120,13 +123,15 @@ def train(dataset=TRAINING_DATASET, start=0, end=-1, model_path='new_model_3x30'
     # Automatically launch TensorBoard
     _ = open_tensorboard(log_dir)
 
+    # Get the subset of datasets to process
     datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
-    for index, name in enumerate(tqdm(datasets_to_process, desc="Processing Datasets"), start):
+    for index, name in enumerate(datasets_to_process, start):
 
         if not hasattr(dataset, name):
             continue
         seqs = getattr(dataset, name)
 
+        # Initialize environment and DQN agent
         env = Environment(seqs)
         agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
 
@@ -136,52 +141,95 @@ def train(dataset=TRAINING_DATASET, start=0, end=-1, model_path='new_model_3x30'
         except:
             pass
 
-        # Training loop
-        for episode in tqdm(range(config.MAX_EPISODE), desc=f'Training on {name}'):
+        # Early Stopping Parameters
+        best_avg_reward = -float('inf')  # Best moving average reward observed
+        no_improve_count = 0             # Count of episodes without improvement
+        early_stopping_patience = 200    # Threshold for stopping training
+        reward_history = []              # Store recent rewards for analysis
 
+        # Create a single tqdm progress bar
+        pbar = tqdm(total=config.MAX_EPISODE, desc=f'Training on {name}', position=0, leave=True, dynamic_ncols=True)
+
+        # Training loop
+        for episode in range(config.MAX_EPISODE):
+            # Reset the alignment state to its initial condition
             state = env.reset()
+
+            # Initialize trackers
             episode_reward = 0
             episode_loss = 0
+            steps = 0
 
             while True:
+                # Select an action using the agent's policy
                 action = agent.select(state)
+
+                # Execute action in the environment
                 reward, next_state, done = env.step(action)
+
+                # Store transition in replay memory
                 agent.replay_memory.push((state, next_state, action, reward, done))
+
+                # Update the model using replay memory
                 loss = agent.update()
 
+                # Accumulate episode statistics
                 episode_reward += reward
                 if loss is not None:  # Check if loss is not None
                     episode_loss += loss
+                steps += 1
 
-                if done == 0:
+                if done == 0:  # End of episode
                     break
                 state = next_state
 
+            # Update epsilon (exploration-exploitation balance)
             agent.update_epsilon()
 
+            # Training metrics calculation
             sp_score = env.calc_score()
             alignment_length = len(env.aligned[0])
             exact_matches = env.calc_exact_matched()
             column_score = exact_matches / alignment_length
 
-            # Log loss, reward, and additional metrics to TensorBoard
+            # Update tqdm progress bar with relevant info
+            pbar.set_postfix({
+                "LAST EP. STATS": f"[ Loss: {episode_loss:.2f}, Reward: {episode_reward:.2f}, Steps: {steps}, Epsilon: {agent.current_epsilon:.2f} ]"
+            })
+            pbar.update(1)
+
+            # TensorBoard Logging
             writers[name].add_scalar('Training/Loss', episode_loss, episode)
-            writers[name].add_scalar('Training/Reward', episode_reward, episode)  # Log episode reward
+            writers[name].add_scalar('Training/Reward', episode_reward, episode)
+            writers[name].add_scalar('Training/Steps', steps, episode)
+            writers[name].add_scalar('Training/Epsilon', agent.current_epsilon, episode)
             writers[name].add_scalar('Metrics/SP', sp_score, episode)
             writers[name].add_scalar('Metrics/CS', column_score, episode)
 
-        # Generate final alignment using the trained model
-        # state = env.reset()
-        # while True:
-        #     action = agent.predict(state)
-        #     reward, next_state, done = env.step(action)
-        #     state = next_state
-        #     if 0 == done:
-        #         break
-        #
-        # env.padding()
+            # Early Stopping: Check reward improvement over last 100 episodes
+            reward_history.append(episode_reward)
+            if len(reward_history) > 100:
+                reward_history.pop(0)  # Keep only last 100 episodes
+                avg_recent_reward = sum(reward_history) / len(reward_history)
 
+                if avg_recent_reward > best_avg_reward:
+                    best_avg_reward = avg_recent_reward
+                    no_improve_count = 0   # Reset counter if improvement is observed
+                else:
+                    no_improve_count += 1  # # Increment if no improvement
+
+                # Stop training if no improvement for "early_stopping_patience" episodes
+                if no_improve_count >= early_stopping_patience:
+                    print(f"Early stopping activated. No improvement for {early_stopping_patience} episodes.")
+                    break
+
+        # Close progress bar after training on dataset
+        pbar.close()
+
+        # Close TensorBoard writer for the dataset
         writers[name].close()
+
+        # Save the trained model
         agent.save(model_path)
 
     print(f"\nTraining completed successfully.")
