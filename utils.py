@@ -2,7 +2,6 @@ import glob
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-import random
 import subprocess
 from tqdm import tqdm
 
@@ -27,40 +26,6 @@ Author: https://github.com/FLaTNNBio/GA-DPAMSA
 # ===========================
 # Genetic Algorithm (GA) Utilities
 # ===========================
-def is_overlap(range1, range2):
-    """
-    Check if two sub-board regions overlap.
-
-    This function determines whether two rectangular regions (sub-boards)
-    intersect based on their row and column coordinates.
-
-    Parameters:
-    -----------
-    - range1 (tuple): Coordinates of the first sub-board in the format (row_start, row_end, col_start, col_end).
-    - range2 (tuple): Coordinates of the second sub-board in the format (row_start, row_end, col_start, col_end).
-
-    Returns:
-    --------
-    - bool: True if the two sub-boards overlap, False otherwise.
-
-    Example:
-    --------
-    >>> is_overlap((0, 3, 0, 3), (2, 5, 2, 5))
-    True
-    >>> is_overlap((0, 2, 0, 2), (3, 5, 3, 5))
-    False
-    """
-    # Extract row and column boundaries
-    from_row1, to_row1, from_column1, to_column1 = range1
-    from_row2, to_row2, from_column2, to_column2 = range2
-
-    # Check if the sub-boards overlap in both rows and columns
-    overlap_row = from_row1 < to_row2 and to_row1 > from_row2
-    overlap_column = from_column1 < to_column2 and to_column1 > from_column2
-
-    return overlap_row and overlap_column
-
-
 def get_sum_of_pairs(chromosome, from_row, to_row, from_column, to_column):
     """
     Compute the Sum-of-Pairs (SP) score for a given sub-board in an MSA alignment.
@@ -165,6 +130,40 @@ def get_column_score(chromosome, from_row, to_row, from_column, to_column):
     return uniform_columns / num_columns if num_columns > 0 else 0
 
 
+def is_overlap(range1, range2):
+    """
+    Check if two sub-board regions overlap.
+
+    This function determines whether two rectangular regions (sub-boards)
+    intersect based on their row and column coordinates.
+
+    Parameters:
+    -----------
+    - range1 (tuple): Coordinates of the first sub-board in the format (row_start, row_end, col_start, col_end).
+    - range2 (tuple): Coordinates of the second sub-board in the format (row_start, row_end, col_start, col_end).
+
+    Returns:
+    --------
+    - bool: True if the two sub-boards overlap, False otherwise.
+
+    Example:
+    --------
+    >>> is_overlap((0, 3, 0, 3), (2, 5, 2, 5))
+    True
+    >>> is_overlap((0, 2, 0, 2), (3, 5, 3, 5))
+    False
+    """
+    # Extract row and column boundaries
+    from_row1, to_row1, from_column1, to_column1 = range1
+    from_row2, to_row2, from_column2, to_column2 = range2
+
+    # Check if the sub-boards overlap in both rows and columns
+    overlap_row = from_row1 < to_row2 and to_row1 > from_row2
+    overlap_column = from_column1 < to_column2 and to_column1 > from_column2
+
+    return overlap_row and overlap_column
+
+
 def check_overlap(new_range,used_ranges):
     """
     Check if a new sub-board range overlaps with any previously used ranges.
@@ -255,164 +254,107 @@ def get_all_different_sub_range(individual, m_prime=config.AGENT_WINDOW_ROW, n_p
     return unique_ranges
 
 
-def calculate_worst_fitted_sub_board(individual):
+def calculate_worst_fitted_sub_board(individual, mode):
     """
-    Identify the worst-performing sub-board in an MSA alignment.
+    Identifies the worst-performing sub-board (sub-region) within an individual.
 
-    This function finds the sub-board (sub-section of the alignment matrix)
-    that has the lowest Sum-of-Pairs (SP) score, indicating poor alignment quality.
+    The worst sub-board is the region with the lowest fitness score. Depending on the mode,
+    this can be determined using:
+    - 'sp': Sum-of-Pairs (SP) score.
+    - 'cs': Column Score (CS).
+    - 'mo': A normalized combination of SP and CS.
 
     Parameters:
     -----------
-    - individual (list of lists): The full MSA alignment matrix, where each row
-                                  represents a sequence and each column represents
-                                  an aligned position.
+        individual (list of lists): The full MSA alignment matrix.
+        mode (str): Evaluation mode ('sp', 'cs', or 'mo').
 
     Returns:
     --------
-    - tuple: A tuple containing:
-        - int: The lowest SP score (worst alignment quality).
-        - tuple: Coordinates of the worst sub-board in the format
-                 (from_row, to_row, from_column, to_column).
-
-    Example:
-    --------
-    >>> individual = [
-    ...     [1, 2, 3, 3, 5],  # A, T, C, C, -
-    ...     [1, 2, 4, 3, 5],  # A, T, G, C, -
-    ...     [1, 3, 3, 3, 5]   # A, C, C, C, -
-    ... ]
-    >>> calculate_worst_fitted_sub_board(individual)
-    (-10, (0, 2, 2, 4))  # Example output (score, coordinates)
+        tuple: (worst_score, (from_row, to_row, from_column, to_column))
+               where worst_score is the lowest fitness score and the coordinates define the worst sub-board.
     """
     # Get all possible non-overlapping sub-boards
-    unique_ranges = get_all_different_sub_range(individual,config.AGENT_WINDOW_ROW,config.AGENT_WINDOW_COLUMN)
-    sub_board_score = []
+    unique_ranges = get_all_different_sub_range(individual, config.AGENT_WINDOW_ROW, config.AGENT_WINDOW_COLUMN)
+    sub_board_scores = []
 
-    # Compute SP score for each sub-board
+    sp_scores, cs_scores = [], []
+
+    # Compute SP and CS scores for each sub-board
     for from_row, to_row, from_column, to_column in unique_ranges:
-        score = get_sum_of_pairs(individual, from_row, to_row, from_column, to_column)
-        sub_board_score.append((score, (from_row, to_row, from_column, to_column)))
-    
-    # Identify the sub-board with the worst alignment (lowest SP score)
-    worst_score_subboard = min(sub_board_score, key=lambda x: x[0])
+        sp_score = get_sum_of_pairs(individual, from_row, to_row, from_column, to_column)
+        cs_score = get_column_score(individual, from_row, to_row, from_column, to_column)
 
-    return worst_score_subboard
+        sp_scores.append(sp_score)
+        cs_scores.append(cs_score)
+
+        sub_board_scores.append((sp_score, cs_score, (from_row, to_row, from_column, to_column)))
+
+    if mode == 'sp':
+        # Select the sub-board with the lowest Sum-of-Pairs score
+        worst_subboard = min(sub_board_scores, key=lambda x: x[0])
+    elif mode == 'cs':
+        # Select the sub-board with the lowest Column Score
+        worst_subboard = min(sub_board_scores, key=lambda x: x[1])
+    else:
+        # Normalize SP scores between 0 and 1
+        min_sp, max_sp = min(sp_scores), max(sp_scores)
+        min_cs, max_cs = min(cs_scores), max(cs_scores)
+
+        def normalize(value, min_val, max_val):
+            return (value - min_val) / (max_val - min_val) if max_val > min_val else 0.5
+
+        # Normalize SP and CS, then find the worst combined sub-board
+        normalized_scores = [
+            (normalize(sp, min_sp, max_sp), normalize(cs, min_cs, max_cs), coords)
+            for sp, cs, coords in sub_board_scores
+        ]
+
+        worst_subboard = min(normalized_scores, key=lambda x: x[0] + x[1])  # Select the worst based on sum of normalized scores
+
+    return worst_subboard[0], worst_subboard[2]
 
 
-def casual_number_generation(start_range, final_range, num_random_el):
+def get_index_of_the_best_fitted_individuals(population_scores, num_individuals):
     """
-    Generate a list of unique random numbers within a given range.
+    Identifies the best-fitted individuals based on the chosen evaluation mode.
 
-    This function ensures that the generated numbers:
-    - Are unique (no duplicates).
-    - Are within the specified range [start_range, final_range].
-    - Have exactly `num_random_el` elements.
+    Selection is made by sorting individuals according to:
+    - 'sp': Highest Sum-of-Pairs score.
+    - 'cs': Highest Column Score.
+    - 'mo': Normalized combination of SP and CS.
 
-    Parameters:
-    -----------
-    - start_range (int): The minimum value (inclusive) of the random range.
-    - final_range (int): The maximum value (inclusive) of the random range.
-    - num_random_el (int): The number of unique random elements to generate.
+    Args:
+        population_scores (list of tuples): The evaluated population scores.
+        num_individuals (int): Number of top individuals to select.
 
     Returns:
-    --------
-    - list: A list of `num_random_el` unique random numbers.
-
-    Raises:
-    -------
-    - ValueError: If `num_random_el` is larger than the possible unique values in the range.
-
-    Example:
-    --------
-    >>> casual_number_generation(1, 10, 5)
-    [3, 7, 1, 9, 5]  # Example output (random)
-
-    >>> casual_number_generation(1, 5, 6)
-    ValueError: Cannot generate 6 unique numbers in range 1-5.
+        list: A list of indices corresponding to the best-fitted individuals.
     """
-    # Ensure the requested number of elements is within the possible range
-    if num_random_el > (final_range - start_range + 1):
-        raise ValueError(f"Cannot generate {num_random_el} unique numbers in range {start_range}-{final_range}.")
+    if len(population_scores[0]) == 2:
+        # If only one metric is used (SP or CS), sort directly
+        sorted_population = sorted(population_scores, key=lambda x: x[1], reverse=True)
+    else:
+        # Normalize both SP and CS scores for fair comparison
+        sp_scores = [x[1] for x in population_scores]
+        cs_scores = [x[2] for x in population_scores]
 
-    generated_number = set()
+        min_sp, max_sp = min(sp_scores), max(sp_scores)
+        min_cs, max_cs = min(cs_scores), max(cs_scores)
 
-    # Generate unique random numbers until the required count is reached
-    while len(generated_number) < num_random_el:
-        num = random.randint(start_range, final_range)
-        generated_number.add(num)
-    
-    return list(generated_number)
+        def normalize(value, min_val, max_val):
+            return (value - min_val) / (max_val - min_val) if max_val > min_val else 0.5
 
+        # Sort based on the normalized sum of SP and CS
+        normalized_population = sorted(
+            [(idx, normalize(sp, min_sp, max_sp), normalize(cs, min_cs, max_cs))
+             for idx, sp, cs in population_scores],
+            key=lambda x: x[1] + x[2], reverse=True
+        )
 
-def get_index_of_the_worst_fitted_individuals(population_sorted, num_individuals):
-    """
-    Identify the worst-fitted individuals in a genetic algorithm (GA) population.
+        sorted_population = [(idx, sp + cs) for idx, sp, cs in normalized_population]
 
-    This function selects the indices of individuals with the lowest fitness scores,
-    allowing genetic operations (e.g., mutation, replacement) to focus on them.
-
-    Parameters:
-    -----------
-    - population_sorted (list of tuples): A sorted population, where each individual is
-                                          represented as (index, fitness_score).
-    - num_individuals (int): The number of worst-fitted individuals to extract.
-
-    Returns:
-    --------
-    - list: A list of indices corresponding to the worst-fitted individuals.
-
-    Example:
-    --------
-    >>> population = [(0, 10), (1, 5), (2, 8), (3, 3), (4, 7)]
-    >>> get_index_of_the_worst_fitted_individuals(population, 2)
-    [3, 1]  # Indices of individuals with the lowest fitness scores
-
-    >>> get_index_of_the_worst_fitted_individuals(population, 3)
-    [3, 1, 4]
-    """
-    # Sort population by fitness score (ascending order)
-    population_score_sorted = sorted(population_sorted, key=lambda x: x[1])
-
-    # Extract indices of the worst-fitted individuals
-    worst_fitted_individual = [item[0] for item in population_score_sorted[:num_individuals]]
-    
-    return worst_fitted_individual
-
-
-def get_index_of_the_best_fitted_individuals(population_sorted, num_individuals):
-    """
-    Identify the best-fitted individuals in a genetic algorithm (GA) population.
-
-    This function selects the indices of individuals with the highest fitness scores,
-    allowing genetic operations (e.g., selection, crossover, elitism) to prioritize them.
-
-    Parameters:
-    -----------
-    - population_sorted (list of tuples): A sorted population, where each individual is
-                                          represented as (index, fitness_score).
-    - num_individuals (int): The number of best-fitted individuals to extract.
-
-    Returns:
-    --------
-    - list: A list of indices corresponding to the best-fitted individuals.
-
-    Example:
-    --------
-    >>> population = [(0, 10), (1, 5), (2, 8), (3, 3), (4, 7)]
-    >>> get_index_of_the_best_fitted_individuals(population, 2)
-    [0, 2]  # Indices of individuals with the highest fitness scores
-
-    >>> get_index_of_the_best_fitted_individuals(population, 3)
-    [0, 2, 4]
-    """
-    # Sort population by fitness score (descending order → best fitness first)
-    population_score_sorted = sorted(population_sorted, key=lambda x: x[1],reverse=True)
-
-    # Extract indices of the best-fitted individuals
-    best_fitted_individual = [item[0] for item in population_score_sorted[:num_individuals]]
-    
-    return best_fitted_individual
+    return [ind for ind, _ in sorted_population[:num_individuals]]
 
 
 def check_if_there_are_all_gaps(row, from_index):
@@ -696,8 +638,8 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
 
             # Write metrics to report
             report.write(f"File: {file_name}\n")
-            report.write(f"Alignment Length (AL): {metrics['AL']}\n")
             report.write(f"Number of Sequences (QTY): {metrics['QTY']}\n")
+            report.write(f"Alignment Length (AL): {metrics['AL']}\n")
             report.write(f"Sum of Pairs (SP): {metrics['SP']}\n")
             report.write(f"Exact Matches (EM): {metrics['EM']}\n")
             report.write(f"Column Score (CS): {metrics['CS']:.3f}\n")
@@ -705,7 +647,7 @@ def run_tool_and_generate_report(tool_name, file_paths, dataset_name):
 
             # Store results for CSV export
             csv_results.append([
-                file_name, metrics['AL'], metrics['QTY'],
+                file_name, metrics['QTY'], metrics['AL'],
                 metrics['SP'], metrics['EM'], metrics['CS']
             ])
 
