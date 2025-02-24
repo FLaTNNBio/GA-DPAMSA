@@ -38,10 +38,10 @@ DEVICE = 'cpu'  # Default computation device
 # ===========================
 AGENT_WINDOW_ROW = 3  # Number of rows in the agent's observation window
 AGENT_WINDOW_COLUMN = 30  # Number of columns in the observation window
-GA_POPULATION_SIZE = 5  # Population size for genetic algorithm
-GA_NUM_ITERATION = 3  # Number of iterations for genetic evolution
-GA_NUM_MOST_FIT_FOR_ITER = 2  # Number of most fit individuals retained per iteration
-GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER = 0.20  # % of the population undergo mutation
+POPULATION_SIZE = 5  # Population size for genetic algorithm
+GA_ITERATIONS = 3  # Number of iterations for genetic evolution
+SELECTION_RATE = 0.5  # % of the population to be selected following a certain criteria
+MUTATION_RATE = 0.2  # % of the population undergo mutation
 
 
 # Ensure hyperparameter constraints

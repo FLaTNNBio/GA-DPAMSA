@@ -289,8 +289,8 @@ def inference(dataset=INFERENCE_DATASET, start=0, end=-1, model_path=INFERENCE_M
         # Create report
         report = (
             f"File: {name}\n"
-            f"Alignment Length (AL): {metrics['AL']}\n"
             f"Number of Sequences (QTY): {metrics['QTY']}\n"
+            f"Alignment Length (AL): {metrics['AL']}\n"
             f"Sum of Pairs (SP): {metrics['SP']}\n"
             f"Exact Matches (EM): {metrics['EM']}\n"
             f"Column Score (CS): {metrics['CS']:.3f}\n"
@@ -303,7 +303,7 @@ def inference(dataset=INFERENCE_DATASET, start=0, end=-1, model_path=INFERENCE_M
 
         with open(csv_file_name, 'a', newline='') as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow([name, metrics['AL'], metrics['QTY'], metrics['SP'], metrics['EM'], metrics['CS']])
+            writer.writerow([name, metrics['QTY'], metrics['AL'], metrics['SP'], metrics['EM'], metrics['CS']])
 
     print(f"\nInference completed successfully.")
     print(f"Report saved at: {report_file_name}")

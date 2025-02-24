@@ -211,4 +211,3 @@ class DQN(ABC):
         """
         self.eval_net.load_state_dict(torch.load(os.path.join(path, f"{filename}.pth"),
                                                  map_location=torch.device(config.DEVICE)))
-        print(f"Model weights {filename}.pth loaded from {path}")
