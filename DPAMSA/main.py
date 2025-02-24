@@ -1,17 +1,20 @@
 import csv
 import os
+import subprocess
+import time
+
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+import webbrowser
 
 import config
 from DPAMSA.dqn import DQN
 from DPAMSA.env import Environment
 import utils
 
-import datasets.training_dataset.synthetic_dataset_4x101bp as dataset1
-
-DATASET = dataset1
-INFERENCE_MODEL = 'model_3x30'
+import datasets.training_dataset.synthetic_dataset_4x101bp as inference_dataset
+import datasets.training_dataset.zhang_dataset_3x30 as training_dataset
 
 """
 DPAMSA Main Script
@@ -27,8 +30,14 @@ Key Features:
 - Saves results as reports and CSV files.
 - Provides an interactive menu for user selection.
 
-Author: https://github.com/ZhangLab312/DPAMSA
+Author (legacy): https://github.com/ZhangLab312/DPAMSA
+Co-Author (improved): https://github.com/FLaTNNBio/GA-DPAMSA
 """
+
+
+TRAINING_DATASET = training_dataset
+INFERENCE_DATASET = inference_dataset
+INFERENCE_MODEL = 'model_3x30'
 
 
 def output_parameters():
@@ -52,7 +61,38 @@ def output_parameters():
     print('\n')
 
 
-def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_path='model_4x101'):
+def open_tensorboard(log_dir):
+    """
+    Launch TensorBoard and open it in the default web browser.
+
+    Parameters:
+    -----------
+    - log_dir (str): Path to the directory where TensorBoard logs are stored.
+
+    Returns:
+    --------
+    - subprocess.Popen: The process running TensorBoard (can be terminated later).
+    """
+    try:
+        print("🚀 Starting TensorBoard on http://localhost:6006...")
+
+        # Start TensorBoard as a background process
+        tensorboard_process = subprocess.Popen(["tensorboard", "--logdir", log_dir, "--port", "6006"])
+
+        # Wait a few seconds to ensure TensorBoard starts properly
+        time.sleep(3)
+
+        # Open TensorBoard in the default web browser
+        webbrowser.open("http://localhost:6006")
+
+        return tensorboard_process
+
+    except Exception as e:
+        print(f"⚠️ Error starting TensorBoard: {e}")
+        return None
+
+
+def train(dataset=TRAINING_DATASET, start=0, end=-1, model_path='new_model_3x30'):
     """
     Train a reinforcement learning model on the given dataset.
 
@@ -61,31 +101,37 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
     - dataset (module): The dataset module containing sequences.
     - start (int): Index to start processing datasets.
     - end (int): Index to stop processing datasets (-1 for all).
-    - truncate_file (bool): Whether to overwrite report files.
     - model_path (str): Path to save the trained model.
     """
     output_parameters()
 
-    tag = os.path.splitext(dataset.file_name)[0]
-    report_file_name = os.path.join(config.DPAMSA_REPORTS_PATH, f"{tag}.txt")
-    csv_file_name = os.path.join(config.CSV_PATH, "DPAMSA_training", f"{tag}.csv")
+    # Create SummaryWriter instances for each dataset
+    writers = {}
+    log_dir = os.path.join(config.RUNS_PATH, os.path.splitext(dataset.file_name)[0])
+    for name in dataset.datasets:
+        writers[name] = SummaryWriter(os.path.join(log_dir, name))
 
-    # Create or truncate results files
-    if truncate_file:
-        with open(report_file_name, 'w'):
-            pass
-        with open(csv_file_name, 'w', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(["Dataset Name", "Number of Sequences", "Alignment Length", "SP Score", "Exact Matches",
-                             "Column Score"])
+        # Write an initial log entry so TensorBoard detects the logs immediately
+        writers[name].add_scalar('Training/Loss', 0, 0)
+        writers[name].add_scalar('Training/Reward', 0, 0)
+        writers[name].add_scalar('Training/Steps', 0, 0)
+        writers[name].add_scalar('Training/Epsilon', config.EPSILON, 0)
+        writers[name].add_scalar('Metrics/SP', 0, 0)
+        writers[name].add_scalar('Metrics/CS', 0, 0)
+        writers[name].flush()  # Force immediate write to disk
 
+    # Automatically launch TensorBoard
+    _ = open_tensorboard(log_dir)
+
+    # Get the subset of datasets to process
     datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
+    for index, name in enumerate(datasets_to_process, start):
 
-    for index, name in enumerate(tqdm(datasets_to_process, desc="Processing Datasets"), start):
         if not hasattr(dataset, name):
             continue
         seqs = getattr(dataset, name)
 
+        # Initialize environment and DQN agent
         env = Environment(seqs)
         agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
 
@@ -95,114 +141,101 @@ def multi_train(dataset=DATASET, start=0, end=-1, truncate_file=False, model_pat
         except:
             pass
 
+        # Early Stopping Parameters
+        best_avg_reward = -float('inf')  # Best moving average reward observed
+        no_improve_count = 0             # Count of episodes without improvement
+        early_stopping_patience = 200    # Threshold for stopping training
+        reward_history = []              # Store recent rewards for analysis
+
+        # Create a single tqdm progress bar
+        pbar = tqdm(total=config.MAX_EPISODE, desc=f'Training on {name}', position=0, leave=True, dynamic_ncols=True)
+
         # Training loop
-        for _ in tqdm(range(config.MAX_EPISODE), desc=name):
+        for episode in range(config.MAX_EPISODE):
+            # Reset the alignment state to its initial condition
             state = env.reset()
+
+            # Initialize trackers
+            episode_reward = 0
+            episode_loss = 0
+            steps = 0
+
             while True:
+                # Select an action using the agent's policy
                 action = agent.select(state)
+
+                # Execute action in the environment
                 reward, next_state, done = env.step(action)
+
+                # Store transition in replay memory
                 agent.replay_memory.push((state, next_state, action, reward, done))
-                agent.update()
-                if done == 0:
+
+                # Update the model using replay memory
+                loss = agent.update()
+
+                # Accumulate episode statistics
+                episode_reward += reward
+                if loss is not None:  # Check if loss is not None
+                    episode_loss += loss
+                steps += 1
+
+                if done == 0:  # End of episode
                     break
                 state = next_state
+
+            # Update epsilon (exploration-exploitation balance)
             agent.update_epsilon()
 
-        # Generate final alignment using the trained model
-        state = env.reset()
-        while True:
-            action = agent.predict(state)
-            _, next_state, done = env.step(action)
-            state = next_state
-            if 0 == done:
-                break
-        
-        env.padding()
+            # Training metrics calculation
+            sp_score = env.calc_score()
+            alignment_length = len(env.aligned[0])
+            exact_matches = env.calc_exact_matched()
+            column_score = exact_matches / alignment_length
+
+            # Update tqdm progress bar with relevant info
+            pbar.set_postfix({
+                "LAST EP. STATS": f"[ Loss: {episode_loss:.2f}, Reward: {episode_reward:.2f}, Steps: {steps}, Epsilon: {agent.current_epsilon:.2f} ]"
+            })
+            pbar.update(1)
+
+            # TensorBoard Logging
+            writers[name].add_scalar('Training/Loss', episode_loss, episode)
+            writers[name].add_scalar('Training/Reward', episode_reward, episode)
+            writers[name].add_scalar('Training/Steps', steps, episode)
+            writers[name].add_scalar('Training/Epsilon', agent.current_epsilon, episode)
+            writers[name].add_scalar('Metrics/SP', sp_score, episode)
+            writers[name].add_scalar('Metrics/CS', column_score, episode)
+
+            # Early Stopping: Check reward improvement over last 100 episodes
+            reward_history.append(episode_reward)
+            if len(reward_history) > 100:
+                reward_history.pop(0)  # Keep only last 100 episodes
+                avg_recent_reward = sum(reward_history) / len(reward_history)
+
+                if avg_recent_reward > best_avg_reward:
+                    best_avg_reward = avg_recent_reward
+                    no_improve_count = 0   # Reset counter if improvement is observed
+                else:
+                    no_improve_count += 1  # # Increment if no improvement
+
+                # Stop training if no improvement for "early_stopping_patience" episodes
+                if no_improve_count >= early_stopping_patience:
+                    print(f"Early stopping activated. No improvement for {early_stopping_patience} episodes.")
+                    break
+
+        # Close progress bar after training on dataset
+        pbar.close()
+
+        # Close TensorBoard writer for the dataset
+        writers[name].close()
+
+        # Save the trained model
         agent.save(model_path)
 
-        # Compute and store alignment metrics
-        alignment_length = len(env.aligned[0])
-        sp_score = env.calc_score()
-        exact_matches = env.calc_exact_matched()
-        column_score = exact_matches / alignment_length
-        num_sequences = len(env.aligned)
-
-        report = (
-            f"File: {name}\n"
-            f"Alignment Length (AL): {alignment_length}\n"
-            f"Number of Sequences (QTY): {num_sequences}\n"
-            f"Sum of Pairs (SP): {sp_score}\n"
-            f"Exact Matches (EM): {exact_matches}\n"
-            f"Column Score (CS): {column_score}:.3f\n"
-            f"Alignment:\n{env.get_alignment()}\n\n"
-        )
-
-        # Save results to files
-        with open(report_file_name, 'a') as report_file:
-            report_file.write(report)
-
-        with open(csv_file_name, 'a', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow([name, alignment_length, num_sequences, sp_score, exact_matches, column_score])
-
     print(f"\nTraining completed successfully.")
-    print(f"Report saved at: {report_file_name}")
-    print(f"CSV saved at: {csv_file_name}")
 
 
-def train(index):
-    """
-    Train the model on a specific dataset.
-
-    Parameters:
-    -----------
-    - index (int): The dataset index to train on.
-    """
-    output_parameters()
-
-    assert hasattr(DATASET, "dataset_{}".format(index)), "No such data called {}".format("dataset_{}".format(index))
-    data = getattr(DATASET, "dataset_{}".format(index))
-
-    print("{}: dataset_{}: {}".format(DATASET.file_name, index, data))
-
-    env = Environment(data)
-    agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
-    p = tqdm(range(config.MAX_EPISODE))
-
-    for _ in p:
-        state = env.reset()
-        while True:
-            action = agent.select(state)
-            reward, next_state, done = env.step(action)
-            agent.replay_memory.push((state, next_state, action, reward, done))
-            agent.update()
-            if done == 0:
-                break
-            state = next_state
-        agent.update_epsilon()
-
-    # Run inference on trained model
-    state = env.reset()
-    while True:
-        action = agent.predict(state)
-        _, next_state, done = env.step(action)
-        state = next_state
-        if 0 == done:
-            break
-
-    env.padding()
-
-    # Print final alignment results
-    print("**********dataset: {} **********\n".format(data))
-    print("total length : {}".format(len(env.aligned[0])))
-    print("sp score     : {}".format(env.calc_score()))
-    print("exact matched: {}".format(env.calc_exact_matched()))
-    print("column score : {}".format(env.calc_exact_matched() / len(env.aligned[0])))
-    print("alignment: \n{}".format(env.get_alignment()))
-    print("********************************\n")
-
-
-def inference(dataset=DATASET, start=0, end=-1, model_path=INFERENCE_MODEL, truncate_file=True):
+def inference(dataset=INFERENCE_DATASET, start=0, end=-1, model_path=INFERENCE_MODEL, truncate_file=True):
     """
     Run inference using a pre-trained model on a given dataset.
 
@@ -284,24 +317,25 @@ def menu():
     while True:
         print("\n====== DPAMSA MENU ======")
         output_parameters()
-        print(f"Dataset loaded: {DATASET.file_name}\n\n")
+        print(f"Dataset loaded for Training: {TRAINING_DATASET.file_name}")
+        print(f"Dataset loaded for Inference: {INFERENCE_DATASET.file_name}\n\n")
         print("1 - Train the model")
         print("2 - Run inference")
-        print("3 - Exit")
+        print("3 - Exit\n")
 
         choice = input("Select an option (1/2/3): ").strip()
 
         if choice == "1":
             print("\nStarting training...")
             config.DEVICE = torch.device(config.DEVICE_NAME)
-            multi_train(DATASET)
+            train()
 
         elif choice == "2":
             print(f"\nModel selected for inference: {INFERENCE_MODEL}")
             confirm = input("Do you want to proceed with inference? (yes/no): ").strip().lower()
             if confirm == "yes":
                 print("\nStarting inference...")
-                inference(DATASET, model_path=INFERENCE_MODEL)
+                inference()
             else:
                 print("\nInference canceled.")
 

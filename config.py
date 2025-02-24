@@ -67,14 +67,19 @@ INFERENCE_DATASET_PATH = os.path.join(BASE_DATASETS_PATH, "inference_dataset")
 # Model Weights Path
 DPAMSA_WEIGHTS_PATH = os.path.join(PROJECT_ROOT, "DPAMSA", "weights")
 
+# Tensorboard Training Runs Path
+RUNS_PATH = os.path.join(PROJECT_ROOT, "DPAMSA", "runs")
+
 # Results Paths
 BASE_RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 REPORTS_PATH = os.path.join(BASE_RESULTS_PATH, "reports")
 DPAMSA_REPORTS_PATH = os.path.join(REPORTS_PATH, "DPAMSA")
 GA_DPAMSA_REPORTS_PATH = os.path.join(REPORTS_PATH, "GA-DPAMSA")
+DATASETS_REPORTS_PATH = os.path.join(REPORTS_PATH, "datasets")
 BENCHMARKS_PATH = os.path.join(BASE_RESULTS_PATH, "benchmarks")
 TOOLS_OUTPUT_PATH = os.path.join(BASE_RESULTS_PATH, "tools_output")
 CSV_PATH = os.path.join(BENCHMARKS_PATH, "csv")
+DATASETS_CSV_PATH = os.path.join(CSV_PATH, "datasets")
 INFERENCE_CSV_PATH = os.path.join(CSV_PATH, "inference")
 DPAMSA_INF_CSV_PATH = os.path.join(INFERENCE_CSV_PATH, "DPAMSA")
 GA_DPAMSA_INF_CSV_PATH = os.path.join(INFERENCE_CSV_PATH, "GA-DPAMSA")
@@ -83,12 +88,15 @@ CHARTS_PATH = os.path.join(BENCHMARKS_PATH, "charts")
 # Ensure directories exist, creating them if they don't
 REQUIRED_DIRECTORIES = [
     DPAMSA_WEIGHTS_PATH,
+    RUNS_PATH,
     BASE_RESULTS_PATH,
     DPAMSA_REPORTS_PATH,
     GA_DPAMSA_REPORTS_PATH,
+    DATASETS_REPORTS_PATH,
     BENCHMARKS_PATH,
     TOOLS_OUTPUT_PATH,
     CSV_PATH,
+    DATASETS_CSV_PATH,
     INFERENCE_CSV_PATH,
     DPAMSA_INF_CSV_PATH,
     GA_DPAMSA_INF_CSV_PATH,
