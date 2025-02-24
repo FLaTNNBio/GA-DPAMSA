@@ -162,23 +162,23 @@ In ```inference``` function, there are two boolean arguments:
 ```column_score_mode```: if True, the GA will maximize only the column score
 ```multi_objective_mode```: if True, the GA will use the intersection between the to metrics
 These two arguments cannot be True at the same time.
-```python
-for i in range(config.GA_NUM_ITERATION):
 
-    #Mutation with the RL agent
-    #ga.random_mutation(model_path)
-    ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)   
-    
-    #Calculate the fitness score for all individuals, based on the sum-of-pairs
+```python
+for i in range(config.GA_ITERATIONS):
+    # Mutation with the RL agent
+    # ga.random_mutation(model_path)
+    ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)
+
+    # Calculate the fitness score for all individuals, based on the sum-of-pairs
     ga.calculate_fitness_score()
 
-    #Execute the selection, get only the most fitted individual for the next iteration
+    # Execute the selection, get only the most fitted individual for the next iteration
     ga.selection()
 
-    #Crossover, split board in two different part and create new individuals by merging each part by 
-    #taking the first part from one individual and the second part from another individual
+    # Crossover, split board in two different part and create new individuals by merging each part by 
+    # taking the first part from one individual and the second part from another individual
     ga.horizontal_crossover()
-    #ga.vertical_crossover()
+    # ga.vertical_crossover()
 
 ```
 In particular, in the ```for``` executed based on the iteration number of the genetic algorithm, it is possible to remove or insert the comment to the function call. In the example above we see that ```ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)``` function is called, you can comment this and uncomment the ```ga.random_mutation(model_path)``` function to use the random mutation. As we can see, the same goes for the horizontal or vertical crossover with the functions ```ga.horizontal_crossover``` and ```ga.vertical_crossover()```
