@@ -93,55 +93,6 @@ def inference(mode, dataset=DATASET, start=0, end=-1, model_path='model_3x30', d
 
         ga = GA(seqs, mode)
         best_alignment = ga.run(model_path, debug)
-        # ga.generate_population()
-        #
-        # # Check the correct size of the window in which the RL agent operate
-        # first_individual = ga.population[0]
-        # if config.AGENT_WINDOW_ROW > len(first_individual):
-        #     print("Window row grater than the number of a sequence")
-        #
-        #     return
-        #
-        # sequence_min_length = min(len(genes) for genes in first_individual)
-        # if config.AGENT_WINDOW_COLUMN > sequence_min_length:
-        #     print("Window column grater than the min length of a sequence")
-        #
-        #     return
-        #
-        # for i in range(config.GA_NUM_ITERATION):
-        #
-        #     # Mutation with the RL agent
-        #     # ga.random_mutation(model_path)
-        #     ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path, column_score_mode)
-        #     # Calculate the fitness score for all individuals, based on the sum-of-pairs
-        #     if not column_score_mode:
-        #         ga.calculate_fitness_score()
-        #     else:
-        #         ga.calculate_column_score()
-        #     # Execute the selection, get only the most fitted individual for the next iteration
-        #     if not multi_objective_mode:
-        #         ga.selection(column_score_mode)
-        #     else:
-        #         ga.selection_intersection()
-        #
-        #     # Crossover, split board in two different part and create new individuals by merging each part by
-        #     # taking the first part from one individual and the second part from another individual
-        #     ga.horizontal_crossover()
-        #     # ga.vertical_crossover()
-        # # In the last iteration, we have to perform again the calculation (last operation is the crossover, so we need to recheck the score)
-        # if not column_score_mode:
-        #     ga.calculate_fitness_score()
-        # else:
-        #     ga.calculate_column_score()
-        #
-        # if not multi_objective_mode:
-        #     most_fitted_chromosome = ga.get_most_fitted_chromosome(column_score_mode)
-        # else:
-        #     most_fitted_chromosome, sum_pairs_score, final_column_score = ga.get_most_fitted_chromosome_intersection()
-        # # print(most_fitted_chromosome)
-        # # most_fitted_chromosome = ga.get_most_fitted_chromosome()
-        # aligned_seqs = ga.get_nucleotides_seqs(most_fitted_chromosome)
-
         Environment.set_alignment(env, best_alignment)
 
         # Compute metrics

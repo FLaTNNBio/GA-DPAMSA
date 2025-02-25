@@ -432,6 +432,47 @@ def clean_unnecessary_gaps(aligned_sequence):
             del row[index_to_start:]  # Remove trailing gaps
 
 
+def get_nucleotides_seqs(chromosome):
+    """
+    Converts a chromosome representation (numerical encoding) into nucleotide sequences.
+
+    Each sequence in the chromosome is represented as a list of integers, where:
+    - 1 -> 'A' (Adenine)
+    - 2 -> 'T' (Thymine)
+    - 3 -> 'C' (Cytosine)
+    - 4 -> 'G' (Guanine)
+    - 5 -> '-' (Gap)
+
+    This function maps each integer back to its corresponding nucleotide character.
+
+    Parameters:
+    -----------
+        chromosome (list of lists): A list of sequences, where each sequence is a list of integers.
+
+    Returns:
+    --------
+        list: A list of strings, where each string represents a nucleotide sequence.
+
+    Example:
+        >>> chromosome = [[1, 2, 3, 5], [4, 3, 2, 1]]
+        >>> get_nucleotides_seqs(chromosome)
+        ['ATC-', 'GCAT']
+    """
+    # Define the nucleotide mapping for integer values
+    nucleotides = ['A', 'T', 'C', 'G', '-']
+
+    # Initialize a list to store the converted nucleotide sequences
+    nucleotides_seqs = []
+
+    # Iterate over each sequence in the chromosome
+    for sequence in chromosome:
+        # Convert each integer in the sequence to its corresponding nucleotide
+        nucleotide_sequence = ''.join([nucleotides[n - 1] for n in sequence])
+        nucleotides_seqs.append(nucleotide_sequence)
+
+    return nucleotides_seqs
+
+
 # ===========================
 # Benchmarking Utilities
 # ===========================
