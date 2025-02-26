@@ -7,8 +7,6 @@ from tqdm import tqdm
 
 import config
 from DPAMSA.env import Environment
-from DPAMSA.main import inference as dpamsa_inference
-from mainGA import inference as ga_inference
 
 """
 DPAMSA Utility Functions
@@ -772,6 +770,8 @@ def run_ga_dpamsa_inference(mode, dataset, dataset_name, model_path):
     --------
     - str: Path to the CSV file where inference results are saved.
     """
+    from mainGA import inference as ga_inference
+
     # Run GA-DPAMSA inference
     ga_inference(mode=mode, dataset=dataset, model_path=model_path)
 
@@ -798,6 +798,8 @@ def run_dpamsa_inference(dataset, dataset_name, model_path):
     --------
     - str: Path to the CSV file where inference results are saved.
     """
+    from DPAMSA.main import inference as dpamsa_inference
+
     # Run DPAMSA inference
     dpamsa_inference(dataset=dataset, model_path=model_path, truncate_file=True)
 
