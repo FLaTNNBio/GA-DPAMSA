@@ -1,15 +1,56 @@
-import datasets.inference_dataset.dataset1_6x60bp as inference_dataset
-import utils
-from DPAMSA.env import Environment
-from GA import GA
-import config
 import csv
 import os
 from tqdm import tqdm
 
+import config
+from DPAMSA.env import Environment
+from GA import GA
+import utils
+
+import datasets.inference_dataset.dataset1_6x60bp as inference_dataset
+
+"""
+GA-DPAMSA Inference Script
+---------------------------
+This script runs the Genetic Algorithm (GA) pipeline as part of the GA-DPAMSA framework 
+for Multiple Sequence Alignment (MSA). The GA is used to evolve a population of alignment 
+solutions over a number of iterations. At each iteration, the pipeline performs mutation 
+(using a Reinforcement Learning agent), selection, and horizontal crossover to improve the 
+alignment quality. The quality is evaluated using metrics such as the Sum-of-Pairs (SP) score 
+and Column Score (CS), or a combination of both in Multi-Objective (MO) mode. A Hall of Fame 
+(HoF) is maintained to store the best individual (alignment) found across all generations.
+
+Key functionalities:
+  - Initialize a population of alignment solutions.
+  - Evolve the population over multiple iterations using mutation, selection, and crossover.
+  - Maintain a Hall of Fame of the best individual (alignment) found so far.
+  - Compute and report alignment metrics (e.g., SP, CS, exact matches, alignment length).
+  - Generate report and CSV files summarizing the performance for each dataset.
+
+Usage:
+  Run this script as the main entry point to perform GA-DPAMSA inference on the specified dataset. 
+  The script processes the dataset(s), evolves alignments using the GA pipeline, and outputs a report 
+  and CSV file with evaluation metrics.
+
+Author: https://github.com/FLaTNNBio/GA-DPAMSA
+"""
+
+# - GA_MODE:
+#       Defines the evaluation mode used by the GA. Available options are:
+#         • 'sp'  → Sum-of-Pairs mode, which optimizes based on pairwise matching scores.
+#         • 'cs'  → Column Score mode, which focuses on maximizing the fraction of exactly
+#                   matched columns.
+#         • 'mo'  → Multi-Objective mode, combining SP and CS metrics for a balanced evaluation.
+#       Choose based on the alignment criteria you want to optimize.
 GA_MODE = 'mo'
+
+# Dataset module containing the sequences to be aligned.
 DATASET = inference_dataset
+
+# Identifier or path to the trained RL model used for mutation.
 INFERENCE_MODEL = 'model_3x30'
+
+# Debug mode flag: set to True for detailed logging, False for normal operation.
 DEBUG_MODE = False
 
 
@@ -74,14 +115,19 @@ def inference(mode, dataset=DATASET, start=0, end=-1, model_path='model_3x30', d
     datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
     for index, dataset_name in enumerate(tqdm(datasets_to_process, desc="Processing Datasets"), start):
 
+        # Extract sequences
         if not hasattr(dataset, dataset_name):
             continue
         seqs = getattr(dataset, dataset_name)
 
+        # Initialize Environment
         env = Environment(seqs, convert_data=False)
 
+        # Initialize and run GA
         ga = GA(seqs, mode)
         best_alignment = ga.run(model_path, debug)
+
+        # Set alignment to use env utilities
         Environment.set_alignment(env, best_alignment)
 
         # Compute metrics

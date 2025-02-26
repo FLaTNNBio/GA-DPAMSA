@@ -1,35 +1,72 @@
-from DPAMSA.env import Environment
-from DPAMSA.dqn import DQN
-import config
-import utils
 import copy
 import random
 
+import config
+from DPAMSA.dqn import DQN
+from DPAMSA.env import Environment
+import utils
 
+"""
+Genetic Algorithm for DPAMSA Refinement (GA-DPAMSA)
+---------------------------------------------------------
+This module implements a Genetic Algorithm (GA) used to refine multiple sequence 
+alignments (MSA) as part of the GA-DPAMSA framework.
+The GA evolves a population of candidate alignments through iterative processes including mutation, selection, 
+and horizontal crossover. Evaluation of candidates is based on alignment quality 
+metrics such as Sum-of-Pairs (SP) score and Column Score (CS), or a combination of both 
+in Multi-Objective (MO) mode. A Hall of Fame is maintained to preserve the best alignment 
+found across all generations.
+
+Key Features:
+    - Population Initialization: Generates an initial set of candidate alignments using 
+      exact copies and modified copies (with random gap insertions).
+    - Fitness Evaluation: Computes fitness scores using SP and/or CS metrics after cleaning 
+      unnecessary gap columns.
+    - Mutation: Applies an RL-based mutation to the worst-performing sub-region of selected 
+      individuals.
+    - Selection: Chooses top-performing individuals based on fitness scores (or Pareto front in MO mode).
+    - Horizontal Crossover: Combines portions (rows) from two parent alignments to create new offspring.
+    - Hall of Fame: Stores the best alignment encountered during the evolution process.
+
+Author: https://github.com/FLaTNNBio/GA-DPAMSA
+"""
+
+# Map nucleotide characters to numerical values (gaps are represented by 5)
 nucleotides_map = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 'a': 1, 't': 2, 'c': 3, 'g': 4, '-': 5}
 
 
 class GA:
     def __init__(self, sequences, mode):
+        """
+        Initializes the Genetic Algorithm with the given sequences and evaluation mode.
+
+        Parameters:
+        -----------
+            sequences (list of str): Input nucleotide sequences to be aligned.
+            mode (str): Evaluation mode. Options:
+                        'sp'  -> Sum-of-Pairs,
+                        'cs'  -> Column Score,
+                        'mo'  -> Multi-Objective (combines SP and CS).
+        """
         self.sequences = sequences
         self.mode = mode
-        self.population_size = config.POPULATION_SIZE
-        self.population = []
-        self.population_score = []
-        self.hall_of_fame = []
-        self.current_iteration = 0
+        self.population_size = config.POPULATION_SIZE  # Number of individuals in the population
+        self.population = []  # List of candidate alignments (each alignment is a list of sequences)
+        self.population_score = []  # Fitness scores corresponding to each candidate alignment
+        self.hall_of_fame = []  # Stores the best candidate alignment and its score
+        self.current_iteration = 0  # Current generation count
 
     def generate_population(self):
         """
-        Generates the initial population with a mix of exact copies and slightly modified versions.
+        Generates the initial population of candidate alignments.
 
-        - A small percentage of individuals are exact copies of the dataset.
-        - The remaining individuals are modified by adding a small number of random gaps (~5% of the sequence length).
-
-        This improves population diversity while ensuring that high-quality sequences are available.
+        The population is built by:
+            - Creating a fraction of exact copies (based on CLONE_RATE) from the input sequences.
+            - Creating modified versions by inserting random gaps (based on GAP_RATE) into sequences.
 
         Returns:
-            None
+        --------
+            None: The resulting population is stored in self.population.
         """
         self.population = []  # Reset population
 
@@ -46,29 +83,30 @@ class GA:
             modified_individual = []
             for sequence in self.sequences:
                 modified_seq = [nucleotides_map[nuc] for nuc in sequence]  # Convert to numerical form
-                num_gaps = max(1, round(len(modified_seq) * config.GAP_RATE))  # 5% gaps
-
+                # Determine number of gaps to insert (at least one gap)
+                num_gaps = max(1, round(len(modified_seq) * config.GAP_RATE))
                 # Insert gaps at random positions
                 for _ in range(num_gaps):
                     gap_pos = random.randint(0, len(modified_seq) - 1)
                     modified_seq.insert(gap_pos, 5)  # Insert gap (5)
-
                 modified_individual.append(modified_seq)
 
             self.population.append(modified_individual)
 
     def update_hall_of_fame(self):
         """
-        Updates the Hall of Fame (HoF) with the best individual found so far.
+        Updates the Hall of Fame (HoF) with the best candidate alignment found so far.
 
-        - If the HoF is empty, stores the best individual from the current population.
-        - Otherwise, adds the HoF individual to a copy of the population and reevaluates the best.
-        - Uses `get_index_of_the_best_fitted_individuals` to determine the absolute best.
+        Process:
+            - If the HoF is empty, initialize it with the best individual from the current population.
+            - Otherwise, combine the current population with the HoF individual, re-evaluate their fitness,
+              and update the HoF with the absolute best candidate.
 
         Returns:
+        --------
             None
         """
-        # If HoF is empty, initialize it with the best individual
+        # If Hall of Fame is empty, set it using the best current individual.
         if not self.hall_of_fame:
             best_idx = utils.get_index_of_the_best_fitted_individuals(self.population_score, num_individuals=1)[0]
             best_individual = copy.deepcopy(self.population[best_idx])
@@ -76,10 +114,11 @@ class GA:
             self.hall_of_fame = (best_individual, best_score)
             return
 
-        # Create copies of the population and scores, including the Hall of Fame individual
+        # Create deep copies of the current population and their scores.
         temp_population = copy.deepcopy(self.population)
         temp_scores = copy.deepcopy(self.population_score)
 
+        # Retrieve the current HoF individual and add it to the temporary population.
         hof_individual, hof_score = copy.deepcopy(self.hall_of_fame)
         temp_population.append(hof_individual)
 
@@ -92,112 +131,155 @@ class GA:
             # Multi-Objective mode
             temp_scores.append((len(temp_scores), hof_score[1], hof_score[2]))
 
-        # Find the absolute best individual among both the current population and the HoF individual
+        # Identify the absolute best candidate among both the current population and HoF individual.
         best_idx = utils.get_index_of_the_best_fitted_individuals(temp_scores, num_individuals=1)[0]
         self.hall_of_fame = (copy.deepcopy(temp_population[best_idx]), copy.deepcopy(temp_scores[best_idx]))
 
     def calculate_fitness_score(self):
-        self.population_score = []
+        """
+        Evaluates and assigns fitness scores to each candidate alignment in the population.
+
+        For each candidate alignment:
+            1. Determine the maximum sequence length and pad all sequences with gaps if necessary.
+            2. Remove unnecessary gap columns.
+            3. Compute fitness metrics:
+                - SP score (if mode is 'sp' or 'mo')
+                - CS score (if mode is 'cs' or 'mo')
+            4. Store the fitness score and update the Hall of Fame.
+
+        Returns:
+        --------
+            None
+        """
+        self.population_score = []  # Reset fitness scores
 
         for index_chromosome, chromosome in enumerate(self.population):
-            # Get max length of sequences in this chromosome
+            # Get the maximum length of the sequences in the candidate alignment.
             max_length = max(map(len, chromosome))
 
-            # Pad sequences to max length
+            # Pad each sequence to ensure all have equal length (using gap value 5).
             for gene in chromosome:
                 gene.extend([5] * (max_length - len(gene)))  # Extend with gaps instead of a loop
 
+            # Clean columns that contain only gaps.
             utils.clean_unnecessary_gaps(chromosome)
-            max_length = max(map(len, chromosome))
+            max_length = max(map(len, chromosome))  # Recompute length after cleaning
 
+            # Compute fitness scores based on the current mode.
             sp_score = utils.get_sum_of_pairs(chromosome, 0, len(chromosome), 0, max_length) \
                 if self.mode in {'sp', 'mo'} else None
             cs_score = utils.get_column_score(chromosome, 0, len(chromosome), 0, max_length) \
                 if self.mode in {'cs', 'mo'} else None
 
+            # Store scores as a tuple: (chromosome index, score) for single mode, or (index, sp, cs) for MO.
             if self.mode == 'mo':
                 self.population_score.append((index_chromosome, sp_score, cs_score))
             else:
                 self.population_score.append((index_chromosome, sp_score or cs_score))
 
+        # Update the Hall of Fame after computing the fitness scores.
         self.update_hall_of_fame()
 
     def _find_pareto_front(self):
         """
-        Trova il Pareto Front basato sui punteggi SP e CS.
-        Un individuo è nel Pareto Front se **non è dominato da nessun altro**.
+        Identifies the Pareto Front of candidate alignments in Multi-Objective mode.
 
-        Un individuo `A` domina `B` se:
-          - A ha un punteggio SP >= B **e**
-          - A ha un punteggio CS >= B **e almeno uno è strettamente maggiore**
+        A candidate is in the Pareto Front if no other candidate dominates it, where domination means:
+            - Another candidate has both an equal or higher SP score and an equal or higher CS score,
+              with at least one being strictly higher.
 
-        :return: Lista di indici degli individui nel Pareto Front.
+        Returns:
+        --------
+            list of tuples: Each tuple contains (individual index, SP score, CS score) for Pareto optimal candidates.
         """
         pareto_front = []
 
+        # Compare each candidate alignment against every other candidate.
         for i, (idx1, sp1, cs1) in enumerate(self.population_score):
             dominated = False
 
             for j, (idx2, sp2, cs2) in enumerate(self.population_score):
                 if i != j:
-                    # Controlla se l'individuo `i` è dominato dall'individuo `j`
+                    # Check if candidate j dominates candidate i.
                     if (sp2 >= sp1 and cs2 >= cs1) and (sp2 > sp1 or cs2 > cs1):
                         dominated = True
-                        break  # Se è dominato, non può stare nel Pareto Front
+                        break  # If it is the case then we don't need it
 
             if not dominated:
-                pareto_front.append((idx1, sp1, cs1))  # Aggiunge al Pareto Front
+                pareto_front.append((idx1, sp1, cs1))  # Add to the Pareto Front
 
         return pareto_front
 
     def selection(self):
+        """
+        Selects the top-performing candidate alignments to form the next generation.
 
+        For single-objective modes ('sp' or 'cs'):
+            - Sort candidates by fitness score in descending order and choose the top fraction (SELECTION_RATE).
+
+        For Multi-Objective mode ('mo'):
+            - Identify the Pareto Front.
+            - If the Pareto Front has fewer candidates than required, supplement with top candidates
+              sorted by SP or CS scores.
+            - Select the top candidates based on these criteria.
+
+        After selection, the population is updated with the selected candidates, and fitness scores are recalculated.
+
+        Returns:
+        --------
+            None
+        """
         top_n = int(self.population_size * config.SELECTION_RATE)
 
         if self.mode in {'sp', 'cs'}:
-            # Selezione standard basata su una singola metrica
+            # Sort candidates by single metric (SP or CS) in descending order.
             sorted_population = sorted(self.population_score, key=lambda x: x[1],
                                        reverse=True)  # Ordinamento decrescente
             top_indices = {ind for ind, score in sorted_population[:top_n]}
 
         elif self.mode == 'mo':
-            # Trova il Pareto Front
+            # Identify the Pareto optimal candidates.
             pareto_front = self._find_pareto_front()
             pareto_indices = {ind for ind, _, _ in pareto_front}
 
-            # Se il Pareto Front è troppo piccolo, aggiungiamo altri individui
+            # If the Pareto Front does not yield enough candidates, supplement with top candidates.
             if len(pareto_indices) < top_n:
-                sorted_sop = sorted(self.population_score, key=lambda x: x[1], reverse=True)  # Ordina per SP
-                sorted_column = sorted(self.population_score, key=lambda x: x[2], reverse=True)  # Ordina per CS
-
-                # Prendi gli individui migliori da entrambe le metriche
+                sorted_sop = sorted(self.population_score, key=lambda x: x[1], reverse=True)  # sort by SP
+                sorted_column = sorted(self.population_score, key=lambda x: x[2], reverse=True)  # sort by CS
                 top_indices_sop = {ind for ind, _, _ in sorted_sop[:top_n]}
                 top_indices_column = {ind for ind, _, _ in sorted_column[:top_n]}
-
-                # Unione tra Pareto Front e migliori SP/CS (se necessario)
                 pareto_indices = pareto_indices.union(top_indices_sop).union(top_indices_column)
             else:
                 sorted_pareto = sorted(pareto_front, key=lambda x: (x[1], x[2]), reverse=True)
                 pareto_indices = {ind for ind, _, _ in sorted_pareto[:top_n]}
 
-            top_indices = pareto_indices  # Gli individui selezionati sono quelli in `top_indices`
+            top_indices = pareto_indices
 
-        # Aggiorna la popolazione mantenendo solo gli individui selezionati
+        # Update the population to include only the selected candidates.
         self.population = [chromosome for idx, chromosome in enumerate(self.population) if idx in top_indices]
         self.calculate_fitness_score()
 
     def horizontal_crossover(self):
         """
-        Performs horizontal crossover to generate new individuals.
-        Each new individual is created by combining deep copies of sequences from two parents.
-        The new individual takes the top part from one parent and the bottom part from the other.
-        New children are generated until the population reaches config.POPULATION_SIZE.
+        Performs horizontal crossover to generate new candidate alignments.
+
+        Horizontal crossover creates a new candidate by combining parts of two parent candidates:
+            - A random crossover point (row index) is chosen.
+            - The child inherits the top part (up to the crossover point) from one parent and the
+              bottom part from the other.
+            - Deep copies are used to ensure that the child is independent of its parents.
+
+        New candidates are generated until the population size reaches the target defined in config.
+
+        Returns:
+        --------
+            None
         """
         new_individuals = []
 
-        # Continue generating children until we reach the desired population size.
+        # Generate offspring until the desired population size is achieved.
         while len(self.population) + len(new_individuals) < config.POPULATION_SIZE:
-            # Randomly choose two distinct parents.
+            # Randomly select two distinct parent candidates.
             parent1 = random.choice(self.population)
             parent2 = random.choice(self.population)
             if parent1 is parent2:
@@ -205,78 +287,75 @@ class GA:
 
             num_seq = len(parent1)
             if num_seq < 2:
-                continue  # Crossover isn't applicable if there's only one sequence
+                continue  # Skip crossover if candidate contains only one sequence
 
-            # Choose a random crossover point between 1 and num_seq-1.
+            # Randomly select a crossover point (between 1 and num_seq-1).
             cut_index = random.randint(1, num_seq - 1)
 
-            # Create a new individual by combining deep copies of the parent's parts.
+            # Create a new candidate by combining deep copies of the two parents' segments.
             child = copy.deepcopy(parent1[:cut_index]) + copy.deepcopy(parent2[cut_index:])
             new_individuals.append(child)
 
-        # Add the new individuals to the population and update fitness scores.
+        # Extend the population with the new offspring and recalculate fitness.
         self.population.extend(new_individuals)
         self.calculate_fitness_score()
 
     def mutation(self, model_path):
         """
-        Applies mutation to the best-fitted individuals by modifying their worst-performing sub-board.
+        Applies mutation to selected candidate alignments by modifying their worst-performing sub-region.
 
-        Mutation is performed using a reinforcement learning (RL) agent on the identified worst sub-region
-        of the selected best individuals.
+        Process:
+            1. Calculate the number of individuals to mutate based on MUTATION_RATE.
+            2. Select the best candidates for mutation (using fitness scores).
+            3. For each selected candidate, identify the worst-performing sub-board.
+            4. Use a Deep Q-Network (DQN) agent (loaded from model_path) to iteratively mutate the sub-board.
+            5. Replace the original sub-board with the mutated version in the candidate alignment.
 
-        Steps:
-        1. Calculate the fitness scores for all individuals in the population.
-        2. Select the top-performing individuals based on the configured mutation rate.
-        3. Identify the worst-fitted sub-board (sub-region with the lowest fitness).
-        4. Perform mutation using the RL agent on the worst sub-board.
-        5. Replace the original sub-board with the mutated version.
-
-        Args:
-            model_path (str): Path to the trained RL model used for mutation.
+        Parameters:
+        -----------
+            model_path (str): File path to the trained RL model used for mutation.
 
         Returns:
+        --------
             None
         """
-        # Compute fitness scores based on the selected mode ('sp', 'cs', or 'mo')
-        # self.calculate_fitness_score()
-
-        # Determine the number of individuals to mutate
+        # Determine how many individuals to mutate.
         num_individuals_to_mutate = round(
             config.POPULATION_SIZE * config.MUTATION_RATE)
 
-        # Select the best individuals for mutation
+        # Select the best individuals (indices) for mutation.
         best_fitted_individuals = utils.get_index_of_the_best_fitted_individuals(self.population_score,
                                                                                  num_individuals_to_mutate)
 
         for index in best_fitted_individuals:
             individual_to_mutate = self.population[index]
 
-            # Identify the worst sub-board based on the selected evaluation mode
+            # Identify the worst-performing sub-board (region) for mutation.
             score, worst_fitted_range = utils.calculate_worst_fitted_sub_board(individual_to_mutate, self.mode)
             from_row, to_row, from_column, to_column = worst_fitted_range
 
-            # Extract the selected rows for mutation
+            # Extract the region (rows) to be mutated.
             row_genes = individual_to_mutate[from_row:to_row]
             sub_board = []
 
-            # Ensure sub-board size meets the RL agent's required dimensions
+            # Ensure the extracted sub-board meets the required dimensions for the RL agent.
             while len(row_genes) < config.AGENT_WINDOW_ROW:
                 row_genes.append([5] * config.AGENT_WINDOW_COLUMN)  # Fill missing rows with gaps (5)
 
-            # Extract the sub-region from each row and ensure it meets RL input requirements
+            # For each row, extract and pad the sub-region.
             for genes in row_genes:
                 sub_genes = genes[from_column:to_column]
                 while len(sub_genes) < config.AGENT_WINDOW_COLUMN:
                     sub_genes.append(5)  # Fill missing columns with gaps (5)
                 sub_board.append(sub_genes)
 
-            # Perform mutation using the RL agent
+            # Create an Environment for the sub-board and load the RL agent.
             env = Environment(sub_board, convert_data=False)
             agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
             agent.load(model_path)
             state = env.reset()
 
+            # Use the agent to mutate the sub-board until a termination condition is met.
             while True:
                 action = agent.predict(state)
                 _, next_state, done = env.step(action)
@@ -284,11 +363,11 @@ class GA:
                 if done == 0:
                     break
 
-            env.padding()
+            env.padding()  # Adjust alignment if needed after mutation
 
-            # Replace the mutated sub-board within the original individual
+            # Replace the original sub-board in the candidate alignment with the mutated version.
             for idx, sequence in enumerate(env.aligned):
-                if idx < len(row_genes):  # Ensure we do not modify extra padding rows
+                if idx < len(row_genes):  # Avoid modifying padding rows beyond the original size
                     row_genes[idx][from_column:to_column] = sequence
 
             individual_to_mutate[from_row:to_row] = row_genes
@@ -300,9 +379,6 @@ class GA:
         - Displays the nucleotide sequence instead of numerical representation.
         - Shows the corresponding fitness score based on the GA mode.
         - Ensures visibility of the best solution found so far.
-
-        Returns:
-            None
         """
         if not self.hall_of_fame:
             print("⚠️ Hall of Fame is empty! No best individual found yet.")
@@ -366,14 +442,27 @@ class GA:
 
     def run(self, model_path, debug_mode=False):
         """
-        Runs the Genetic Algorithm (GA) pipeline for multiple iterations using the selected fitness mode.
+        Executes the complete Genetic Algorithm pipeline over multiple iterations.
 
-        Args:
-            model_path (str): Path to the reinforcement learning (RL) model used for mutation.
-            debug_mode (bool, optional): If True, enables detailed logging of each step. Defaults to False.
+        Process:
+            1. Initialize the population.
+            2. Calculate initial fitness scores.
+            3. Validate that the RL model's window dimensions are compatible with the sequences.
+            4. Iterate through GA steps:
+                a. Apply mutation.
+                b. Recalculate fitness scores.
+                c. Perform selection.
+                d. Execute horizontal crossover.
+            5. Return the refined alignment from the best candidate in the Hall of Fame.
+
+        Parameters:
+        -----------
+            model_path (str): Path to the RL model used for mutation.
+            debug_mode (bool): If True, prints detailed log messages at each step.
 
         Returns:
-            list: The best individual's aligned sequences.
+        --------
+            list: The nucleotide sequences (alignment) of the best candidate.
         """
 
         if debug_mode:
