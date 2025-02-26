@@ -750,7 +750,7 @@ def save_inference_csv(csv_data, tool_name, dataset_name):
     return csv_file_path  # Return the file path for tracking
 
 
-def run_ga_dpamsa_inference(dataset, dataset_name, model_path):
+def run_ga_dpamsa_inference(mode, dataset, dataset_name, model_path):
     """
     Run inference using GA-DPAMSA and return the results CSV file path.
 
@@ -760,6 +760,10 @@ def run_ga_dpamsa_inference(dataset, dataset_name, model_path):
 
     Parameters:
     -----------
+    - mode (str): The mode of operation. Must be one of:
+            * 'sp'  -> Sum of Pairs mode
+            * 'cs'  -> Column Score mode
+            * 'mo'  -> Multi-Objective mode
     - dataset (module): The dataset module containing sequences to be aligned.
     - dataset_name (str): The name of the dataset (used for naming output files).
     - model_path (str): Path to the trained GA-DPAMSA model.
@@ -769,10 +773,11 @@ def run_ga_dpamsa_inference(dataset, dataset_name, model_path):
     - str: Path to the CSV file where inference results are saved.
     """
     # Run GA-DPAMSA inference
-    ga_inference(dataset=dataset, model_path=model_path, truncate_file=True)
+    ga_inference(mode=mode, dataset=dataset, model_path=model_path)
 
     # Construct and return the CSV results file path
-    return os.path.join(config.GA_DPAMSA_INF_CSV_PATH, f"{dataset_name}_GA_DPAMSA_results.csv")
+    mode_tag = {"sp": "Max_SP", "cs": "Max_CS", "mo": "MO"}[mode]
+    return os.path.join(config.GA_DPAMSA_INF_CSV_PATH, f"{dataset_name}_{mode_tag}_GA_DPAMSA_results.csv")
 
 
 def run_dpamsa_inference(dataset, dataset_name, model_path):
@@ -834,7 +839,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         df = pd.read_csv(csv_path)
 
         # Assign colors to tools
-        color = 'red' if tool == 'GA-DPAMSA' else 'cyan'
+        color = 'red' if tool == 'GA-DPAMSA' else 'turquoise'
         color_map[tool] = color
 
         # Store box plot data
@@ -855,7 +860,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         [data for _, data in sum_of_pairs_data],
         labels=tools,
         patch_artist=True,
-        medianprops=dict(color='black', linewidth=2),
+        medianprops=dict(color='black', linewidth=1),
         zorder=3
     )
 
@@ -869,7 +874,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout()
+    plt.tight_layout(pad=5)
     plt.savefig(os.path.join(dataset_charts_dir, f'sum_of_pairs_distribution.png'), dpi=300)
     plt.close()
 
@@ -881,7 +886,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         [data for _, data in column_score_data],
         labels=tools,
         patch_artist=True,
-        medianprops=dict(color='black', linewidth=2),
+        medianprops=dict(color='black', linewidth=1),
         zorder=3
     )
 
@@ -895,7 +900,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout()
+    plt.tight_layout(pad=5)
     plt.savefig(os.path.join(dataset_charts_dir, f'column_score_distribution.png'), dpi=300)
     plt.close()
 
@@ -907,7 +912,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         mean_sp.keys(),
         mean_sp.values(),
         color=[color_map[tool] for tool in mean_sp.keys()],
-        edgecolor='black', linewidth=2,
+        edgecolor='black', linewidth=1.2,
         zorder=3
     )
 
@@ -916,12 +921,12 @@ def plot_metrics(tool_csv_paths, dataset_name):
         height = bar.get_height()
         plt.text(
             bar.get_x() + bar.get_width() / 2,
-            height + (0.01 * height),
+            height + (0.05 * height),
             f'{height:.2f}',
             ha='center',
             va='bottom',
             fontweight='bold',
-            fontsize=10
+            fontsize=12
         )
 
     plt.title(f'Mean SP results for {dataset_name}', fontsize=16, fontweight='bold')
@@ -929,7 +934,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout()
+    plt.tight_layout(pad=5)
     plt.savefig(os.path.join(dataset_charts_dir, f'mean_sum_of_pairs.png'), dpi=300)
     plt.close()
 
@@ -941,7 +946,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         mean_cs.keys(),
         mean_cs.values(),
         color=[color_map[tool] for tool in mean_cs.keys()],
-        edgecolor='black', linewidth=2,
+        edgecolor='black', linewidth=1.2,
         zorder=3
     )
 
@@ -950,12 +955,12 @@ def plot_metrics(tool_csv_paths, dataset_name):
         height = bar.get_height()
         plt.text(
             bar.get_x() + bar.get_width() / 2,
-            height + (0.01 * height),
+            height + (0.03 * height),
             f'{height:.3f}',
             ha='center',
             va='bottom',
             fontweight='bold',
-            fontsize=10
+            fontsize=12
         )
 
     plt.title(f'Mean CS results for {dataset_name}', fontsize=16, fontweight='bold')
@@ -963,6 +968,6 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout()
+    plt.tight_layout(pad=5)
     plt.savefig(os.path.join(dataset_charts_dir, f'mean_column_score.png'), dpi=300)
     plt.close()

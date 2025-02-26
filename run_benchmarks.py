@@ -54,7 +54,7 @@ def main():
     tool_csv_paths = {}
 
     # GA-DPAMSA must always be executed
-    ga_csv_path = utils.run_ga_dpamsa_inference(inference_dataset, DATASET_NAME, GA_DPAMSA_MODEL)
+    ga_csv_path = utils.run_ga_dpamsa_inference('mo', inference_dataset, DATASET_NAME, GA_DPAMSA_MODEL)
     tool_csv_paths['GA-DPAMSA'] = ga_csv_path
 
     # Run DPAMSA if option 1 or 3 is selected
