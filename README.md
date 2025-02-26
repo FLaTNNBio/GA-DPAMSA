@@ -192,7 +192,7 @@ The overall flow of the GA-DPAMSA algorithm can be summarized as follows:
 
 ---
 
-# How to use GA-DPAMSA
+## How to use GA-DPAMSA
 First clone the repository locally
 ```sh
 git clone https://github.com/FLaTNNBio/GA-DPAMSA
