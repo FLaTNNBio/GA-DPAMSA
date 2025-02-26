@@ -229,7 +229,7 @@ def get_all_different_sub_range(individual, m_prime=config.AGENT_WINDOW_ROW, n_p
     >>> get_all_different_sub_range(individual, 2, 2)
     [(0, 2, 0, 2), (0, 2, 2, 4), (1, 3, 0, 2), (1, 3, 2, 4)]
     """
-    m = len(individual) # Total number of sequences (rows)
+    m = len(individual)  # Total number of sequences (rows)
 
     # Find the shortest sequence length to handle variable-length sequences
     n = min(len(genes) for genes in individual)
@@ -391,10 +391,8 @@ def check_if_there_are_all_gaps(row, from_index):
 
 def clean_unnecessary_gaps(aligned_sequence):
     """
-    Remove trailing columns that contain only gaps (5) in an MSA alignment.
-
-    This function scans each row to find the rightmost column where gaps start
-    and trims unnecessary trailing gaps.
+    Removes trailing columns that contain only gaps (5) in an MSA alignment.
+    Also removes any columns where every sequence consists only of gaps.
 
     Parameters:
     -----------
@@ -404,32 +402,32 @@ def clean_unnecessary_gaps(aligned_sequence):
     Returns:
     --------
     - None: The function modifies `aligned_sequence` in place.
-
-    Example:
-    --------
-    >>> aligned_sequence = [
-    ...     [1, 2, 3, 5, 5],  # A, T, C, -, -
-    ...     [1, 2, 3, 5, 5],  # A, T, C, -, -
-    ...     [1, 2, 3, 5, 5]   # A, T, C, -, -
-    ... ]
-    >>> clean_unnecessary_gaps(aligned_sequence)
-    >>> print(aligned_sequence)
-    [[1, 2, 3], [1, 2, 3], [1, 2, 3]]  # Gaps removed
     """
-    indexes_to_start_clean = []
+    if not aligned_sequence or not aligned_sequence[0]:
+        return  # Do nothing if sequence is empty
 
+    # Helper: compute the index where trailing gaps begin for a given row.
+    def trailing_gap_index(row):
+        i = len(row)
+        while i > 0 and row[i - 1] == 5:
+            i -= 1
+        return i
+
+    # Step 1: Remove trailing gap columns that are gaps in every row.
+    # Compute, for each row, the first index from the right where non-gaps appear.
+    # The common trailing gap region (present in every row) starts at the maximum index.
+    common_trailing_index = max(trailing_gap_index(row) for row in aligned_sequence)
     for row in aligned_sequence:
-        for index_col, el in enumerate(row):
-            if el == 5:  # Check if current element is a gap
-                result = check_if_there_are_all_gaps(row, index_col + 1)
-                if result:  # If all remaining elements are gaps, store index
-                    indexes_to_start_clean.append(index_col)
-                    break  # Move to next row
+        del row[common_trailing_index:]  # Remove columns from common_trailing_index onward
 
-    if indexes_to_start_clean:
-        index_to_start = max(indexes_to_start_clean)  # Rightmost starting point
+    # Step 2: Remove any remaining columns that are entirely gaps.
+    num_columns = len(aligned_sequence[0])
+    # Identify columns where every row has a gap (value 5)
+    all_gap_columns = [col for col in range(num_columns) if all(row[col] == 5 for row in aligned_sequence)]
+    # Remove these columns in reverse order to avoid shifting indices
+    for col in sorted(all_gap_columns, reverse=True):
         for row in aligned_sequence:
-            del row[index_to_start:]  # Remove trailing gaps
+            del row[col]
 
 
 def get_nucleotides_seqs(chromosome):

@@ -16,21 +16,99 @@ class GA:
         self.population_size = config.POPULATION_SIZE
         self.population = []
         self.population_score = []
+        self.hall_of_fame = []
         self.current_iteration = 0
 
     def generate_population(self):
-        for i in range(self.population_size):
-            self.population.append([[nucleotides_map[self.sequences[i][j]] for j in range(len(self.sequences[i]))] for i in range(len(self.sequences))])
+        """
+        Generates the initial population with a mix of exact copies and slightly modified versions.
+
+        - A small percentage of individuals are exact copies of the dataset.
+        - The remaining individuals are modified by adding a small number of random gaps (~5% of the sequence length).
+
+        This improves population diversity while ensuring that high-quality sequences are available.
+
+        Returns:
+            None
+        """
+        self.population = []  # Reset population
+
+        # Determine the number of exact copies and modified individuals
+        num_exact_copies = round(self.population_size * config.CLONE_RATE)
+        num_modified = self.population_size - num_exact_copies
+
+        # Add exact copies of dataset sequences
+        for _ in range(num_exact_copies):
+            self.population.append([[nucleotides_map[nuc] for nuc in seq] for seq in self.sequences])
+
+        # Add modified sequences with random gaps
+        for _ in range(num_modified):
+            modified_individual = []
+            for sequence in self.sequences:
+                modified_seq = [nucleotides_map[nuc] for nuc in sequence]  # Convert to numerical form
+                num_gaps = max(1, round(len(modified_seq) * config.GAP_RATE))  # 5% gaps
+
+                # Insert gaps at random positions
+                for _ in range(num_gaps):
+                    gap_pos = random.randint(0, len(modified_seq) - 1)
+                    modified_seq.insert(gap_pos, 5)  # Insert gap (5)
+
+                modified_individual.append(modified_seq)
+
+            self.population.append(modified_individual)
+
+    def update_hall_of_fame(self):
+        """
+        Updates the Hall of Fame (HoF) with the best individual found so far.
+
+        - If the HoF is empty, stores the best individual from the current population.
+        - Otherwise, adds the HoF individual to a copy of the population and reevaluates the best.
+        - Uses `get_index_of_the_best_fitted_individuals` to determine the absolute best.
+
+        Returns:
+            None
+        """
+        # If HoF is empty, initialize it with the best individual
+        if not self.hall_of_fame:
+            best_idx = utils.get_index_of_the_best_fitted_individuals(self.population_score, num_individuals=1)[0]
+            best_individual = copy.deepcopy(self.population[best_idx])
+            best_score = copy.deepcopy(self.population_score[best_idx])
+            self.hall_of_fame = (best_individual, best_score)
+            return
+
+        # Create copies of the population and scores, including the Hall of Fame individual
+        temp_population = copy.deepcopy(self.population)
+        temp_scores = copy.deepcopy(self.population_score)
+
+        hof_individual, hof_score = copy.deepcopy(self.hall_of_fame)
+        temp_population.append(hof_individual)
+
+        # The following code avoids HoF update issues
+        # Appending just hof_score leads to wrong HoF update due to the saved index in hof_score
+        if len(temp_scores[0]) == 2:
+            # If only one metric is used (SP or CS)
+            temp_scores.append((len(temp_scores), hof_score[1]))
+        else:
+            # Multi-Objective mode
+            temp_scores.append((len(temp_scores), hof_score[1], hof_score[2]))
+
+        # Find the absolute best individual among both the current population and the HoF individual
+        best_idx = utils.get_index_of_the_best_fitted_individuals(temp_scores, num_individuals=1)[0]
+        self.hall_of_fame = (copy.deepcopy(temp_population[best_idx]), copy.deepcopy(temp_scores[best_idx]))
 
     def calculate_fitness_score(self):
         self.population_score = []
 
         for index_chromosome, chromosome in enumerate(self.population):
-            # # Padding
-            max_length = max(len(gene) for gene in chromosome)
+            # Get max length of sequences in this chromosome
+            max_length = max(map(len, chromosome))
+
+            # Pad sequences to max length
             for gene in chromosome:
-                while len(gene) < max_length:
-                    gene.append(5)
+                gene.extend([5] * (max_length - len(gene)))  # Extend with gaps instead of a loop
+
+            utils.clean_unnecessary_gaps(chromosome)
+            max_length = max(map(len, chromosome))
 
             sp_score = utils.get_sum_of_pairs(chromosome, 0, len(chromosome), 0, max_length) \
                 if self.mode in {'sp', 'mo'} else None
@@ -41,6 +119,8 @@ class GA:
                 self.population_score.append((index_chromosome, sp_score, cs_score))
             else:
                 self.population_score.append((index_chromosome, sp_score or cs_score))
+
+        self.update_hall_of_fame()
 
     def _find_pareto_front(self):
         """
@@ -104,58 +184,39 @@ class GA:
 
         # Aggiorna la popolazione mantenendo solo gli individui selezionati
         self.population = [chromosome for idx, chromosome in enumerate(self.population) if idx in top_indices]
+        self.calculate_fitness_score()
 
-    def get_most_fitted_individual(self):
-        """
-        Evaluate the best-fitted individual based on the selected mode.
-
-        Returns:
-        --------
-            - The best chromosome.
-        """
-        # Get the index of the best individual using the existing selection function
-        best_idx = utils.get_index_of_the_best_fitted_individuals(self.population_score, num_individuals=1)[0]
-
-        # Retrieve the best chromosome
-        best_individual = self.population[best_idx]
-
-        # Clean unnecessary gaps
-        utils.clean_unnecessary_gaps(best_individual)
-
-        return best_individual
-    
     def horizontal_crossover(self):
-        num_seq = len(self.population[0])
+        """
+        Performs horizontal crossover to generate new individuals.
+        Each new individual is created by combining deep copies of sequences from two parents.
+        The new individual takes the top part from one parent and the bottom part from the other.
+        New children are generated until the population reaches config.POPULATION_SIZE.
+        """
+        new_individuals = []
 
-        #Check if the number of sequence is even (I do not break exactly into two equal parts)
-        if num_seq % 2 == 0:
-            cut_index = num_seq // 2
-        else:
-            cut_index = (num_seq // 2) + 1
-        
-        new_indivisuals = []
-        while (len(self.population) + len(new_indivisuals) < config.POPULATION_SIZE): #Repeat until we reach again the number of desidered individual in the population
-            #for i in range(0, len(self.population) - 1,2): #Loop on population in steps of 2
-                index_parent1 = random.randint(0,len(self.population) - 1)
-                index_parent2 = random.randint(0,len(self.population) - 1)
-                parent1 = self.population[index_parent1]
-                parent2 = self.population[index_parent2]
-                first_half_parent1 = []
-                second_half_parent2 = []
+        # Continue generating children until we reach the desired population size.
+        while len(self.population) + len(new_individuals) < config.POPULATION_SIZE:
+            # Randomly choose two distinct parents.
+            parent1 = random.choice(self.population)
+            parent2 = random.choice(self.population)
+            if parent1 is parent2:
+                continue  # Ensure distinct parents
 
-                #First half of genes from parent1
-                first_half_parent1 = parent1[:cut_index]
-                #Second half of genes from parent1
-                second_half_parent2 = parent2[cut_index:]
+            num_seq = len(parent1)
+            if num_seq < 2:
+                continue  # Crossover isn't applicable if there's only one sequence
 
-                #Contruct the new individual
-                new_chromosome = first_half_parent1 + second_half_parent2
-                new_indivisuals.append(new_chromosome)
-        
-        new_population = self.population + new_indivisuals
-        self.population = new_population
-        
-        return
+            # Choose a random crossover point between 1 and num_seq-1.
+            cut_index = random.randint(1, num_seq - 1)
+
+            # Create a new individual by combining deep copies of the parent's parts.
+            child = copy.deepcopy(parent1[:cut_index]) + copy.deepcopy(parent2[cut_index:])
+            new_individuals.append(child)
+
+        # Add the new individuals to the population and update fitness scores.
+        self.population.extend(new_individuals)
+        self.calculate_fitness_score()
 
     def mutation(self, model_path):
         """
@@ -178,7 +239,7 @@ class GA:
             None
         """
         # Compute fitness scores based on the selected mode ('sp', 'cs', or 'mo')
-        self.calculate_fitness_score()
+        # self.calculate_fitness_score()
 
         # Determine the number of individuals to mutate
         num_individuals_to_mutate = round(
@@ -232,6 +293,42 @@ class GA:
 
             individual_to_mutate[from_row:to_row] = row_genes
 
+    def print_hall_of_fame(self):
+        """
+        Prints the best individual currently stored in the Hall of Fame.
+
+        - Displays the nucleotide sequence instead of numerical representation.
+        - Shows the corresponding fitness score based on the GA mode.
+        - Ensures visibility of the best solution found so far.
+
+        Returns:
+            None
+        """
+        if not self.hall_of_fame:
+            print("⚠️ Hall of Fame is empty! No best individual found yet.")
+            return
+
+        hof_individual, hof_score = self.hall_of_fame
+
+        print("\n🏆 HALL OF FAME - BEST INDIVIDUAL SO FAR:")
+        print("=" * 50)
+
+        # Convert numerical sequence to nucleotides
+        converted_hof = utils.get_nucleotides_seqs(hof_individual)
+
+        for sequence in converted_hof:
+            print(f"   🧬 {sequence}")
+
+        # Display fitness scores based on mode
+        if self.mode in {"sp", "cs"}:
+            score_type = "SP" if self.mode == "sp" else "CS"
+            print(f"   🎯 Best {score_type} Score: {hof_score[1]}")
+        elif self.mode == "mo":
+            print(f"   🎯 SP Score: {hof_score[1]}")
+            print(f"   🎯 CS Score: {hof_score[2]}")
+
+        print("=" * 50)
+
     def print_population(self):
         """
         Prints the current population along with their fitness scores.
@@ -264,7 +361,8 @@ class GA:
 
             print("-" * 50)
 
-        print("✅ Population entirely printed.\n")
+        self.print_hall_of_fame()
+        print("\n✅ Population entirely printed.\n")
 
     def run(self, model_path, debug_mode=False):
         """
@@ -342,15 +440,9 @@ class GA:
                 self.print_population()
 
         if debug_mode:
-            print("🟠 Step 3: Computing final fitness scores...")
+            print("🟠 Step 3: Selecting the best chromosome...")
 
-        self.calculate_fitness_score()
-
-        if debug_mode:
-            print("✅ Final fitness scores computed.")
-            print("🏆 Selecting the best chromosome...")
-
-        best_chromosome = self.get_most_fitted_individual()
+        best_chromosome, _ = self.hall_of_fame
 
         if debug_mode:
             print("✅ Best chromosome selected.")

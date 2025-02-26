@@ -1,4 +1,4 @@
-import datasets.inference_dataset.dataset1_3x30bp as inference_dataset
+import datasets.inference_dataset.dataset1_6x60bp as inference_dataset
 import utils
 from DPAMSA.env import Environment
 from GA import GA
@@ -14,24 +14,13 @@ DEBUG_MODE = False
 
 
 def output_parameters():
-    print("---------- DPAMSA parameters -----------------")
-    print("Gap penalty: {}".format(config.GAP_PENALTY))
-    print("Mismatch penalty: {}".format(config.MISMATCH_PENALTY))
-    print("Match reward: {}".format(config.MATCH_REWARD))
-    print("Episode: {}".format(config.MAX_EPISODE))
-    print("Batch size: {}".format(config.BATCH_SIZE))
-    print("Replay memory size: {}".format(config.REPLAY_MEMORY_SIZE))
-    print("Alpha: {}".format(config.ALPHA))
-    print("Epsilon: {}".format(config.EPSILON))
-    print("Gamma: {}".format(config.GAMMA))
-    print("Delta: {}".format(config.DELTA))
-    print("Decrement iteration: {}".format(config.DECREMENT_ITERATION))
-    print("Update iteration: {}".format(config.UPDATE_ITERATION))
-    print("Device: {}".format(config.DEVICE_NAME))
+    print('\n')
     print("-------- Genetic Algorithm parameters ---------")
     print(f"Window size:{config.AGENT_WINDOW_ROW}x{config.AGENT_WINDOW_COLUMN}")
     print(f"Population Size: {config.POPULATION_SIZE}")
     print(f"Number of iteration: {config.GA_ITERATIONS}")
+    print(f"Clone Rate: {config.CLONE_RATE * 100}%")
+    print(f"Gap Rate: {config.GAP_RATE * 100}%")
     print(f"Selection Rate: {config.SELECTION_RATE * 100}%")
     print(f"Mutation Rate: {config.MUTATION_RATE * 100}%")
     print('\n')

@@ -38,10 +38,12 @@ DEVICE = 'cpu'  # Default computation device
 # ===========================
 AGENT_WINDOW_ROW = 3  # Number of rows in the agent's observation window
 AGENT_WINDOW_COLUMN = 30  # Number of columns in the observation window
-POPULATION_SIZE = 5  # Population size for genetic algorithm
 GA_ITERATIONS = 3  # Number of iterations for genetic evolution
+POPULATION_SIZE = 5  # Population size for genetic algorithm
+CLONE_RATE = 0.25  # % of the population to be an exact copy of the input sequences during Population Generation Phase
+GAP_RATE = 0.05  # % of Gap to be added to an individual during Population Generation Phase (calculated on seq. length)
 SELECTION_RATE = 0.5  # % of the population to be selected following a certain criteria
-MUTATION_RATE = 0.2  # % of the population undergo mutation
+MUTATION_RATE = 0.25  # % of the population undergo mutation
 
 
 # Ensure hyperparameter constraints
