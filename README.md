@@ -1,36 +1,51 @@
 # Genetic Algorithm and Deep reinforcement learning for MSA (GA-DPAMSA)
 GA-DPAMSA is an application for multiple sequence alignment using a Deep Reinforcement Learning model (DPAMSA) together with a genetic algorithm. Starting from the [DPAMSA model](https://github.com/ZhangLab312/DPAMSA), a genetic algorithm was built on it, which allows for higher performance than the base model and allows the use of a Reinforcement learning agent trained for a problem $P$, to also be used for a problem $P_2$ where $P_2$ is more complex (has larger dimensions in terms of the number of sequences and bases per sequence), without the need to re-train the model, while still achieving excellent performance. This is achieved by making sure that in the mutation phase of the genetic algorithm, the reinforcement learning agent is employed to operate on the problem that has the same dimension as the problem $P$, i.e., the one on which it was initially trained.
 
-# Table of contents
-- [GA-DPAMSA](#genetic-algorithm-and-deep-reinforcement-learning-for-msa-ga-dpamsa)
+---
 
-- [How the genetic algorithm is implemented](#how-the-genetic-algorithm-is-implemented)
+# Table of contents
+- [Dataset creation](#dataset-creation)
+
+- [How the genetic algorithm is implemented](#how-the-genetic-algorithm-is-implemented-)
 
 - [How to use GA-DPAMSA?](#how-to-use-ga-dpamsa)
     - [Configuration](#configuration)
-    - [Inference](#inference)
-    - [Evaluation](#evaluation)
     - [Training](#training)
-- [Results](#result)
+    - [Inference](#inference)
+- [Benchmarking](#benchmarking)
 
-- [How change the RL Model](#how-change-the-rl-model)
+---
 
 ## Dataset creation
-Running the script ```create_dataset.py``` is possible to create a stable and controlled dataset for the experiments.
+Running the script ```generate_dataset.py``` is possible to create a stable and controlled dataset for the experiments.
 
-```
-# Configuration parameters
-num_sequences = 6
-sequence_length = 60
-mutation_rate = 0.10  # Mutation rate 10%
-gap_rate = 0.05  # Gap insertion rate
-number_of_dataset = 50
-min_score_threshold = 50  # Minimum alignment score threshold
+```py
+# ================= CONFIGURATION ================= #
+# User-configurable parameters
+num_sequences = 6            # Number of DNA sequences per dataset
+sequence_length = 30         # Length of each sequence
+mutation_rate = 0.10         # Mutation probability (10%)
+gap_rate = 0.05              # Gap insertion probability (5%)
+number_of_datasets = 50      # Total number of datasets to generate
+min_score_threshold = 10     # Minimum alignment score threshold
+max_score_threshold = None   # Maximum alignment score threshold (None = no limit)
+
+# Conserved block settings
+num_conserved_blocks = 1      # Number of conserved blocks per sequence
+conserved_block_sizes = [10]  # List of block sizes (one size per block)
+
+# Additional options
+fixed_block_position = False  # True = fixed position, False = random position
+mutate_inside_blocks = False  # True = mutations inside blocks allowed, False = only outside
 ```
 
-The following parameters sets the dataset creation, ```num_sequences``` sets the number of sequences for each dataset, ```sequence_length``` sets the lenght for each sequence, ```mutation_rate``` sets the rate of mutation for the sequence, 
-```gap_rate``` sets the rate for gaps in the sequences, ```number_of_dataset``` sets the number of datasets to create, ```min_score_threshold``` sets the minumun score to accept the dataset. 
-The minumun score is used by the the function ```calculate_alignment_score``` calculates an alignment score for a set of sequences based on pairwise comparisons of characters (nucleotides or gaps) at each position using the score matrix, if the alignment score is over the ```min_score_threshold```, the dataset is accepted.
+The parameters in this script are carefully tuned to balance variability and conservation in the generated DNA sequences. The number of sequences and their lengths directly determine the complexity of the dataset; more sequences and longer lengths allow for more sites where mutations or gap insertions can occur, making the alignment more challenging. The mutation rate introduces diversity by randomly altering bases, while the gap rate injects missing information into the sequences by replacing bases with gap characters. Higher values for either result in greater divergence among the sequences, potentially lowering alignment scores.
+
+Conserved blocks are integrated into each sequence to simulate biologically important regions that remain relatively unchanged. The number and size of these blocks, along with their positioning—whether fixed or random—ensure that a portion of each sequence retains high similarity. The option to prevent mutations within these blocks further reinforces their conservation, which is essential for certain alignment scenarios. Finally, alignment score thresholds filter the generated datasets to maintain a desired level of overall similarity.
+
+Together, these parameters interact to create datasets that can be tailored for different benchmarking or training purposes, striking a balance between variability and conservation in a controlled manner.
+
+---
 
 ## How the genetic algorithm is implemented 
 The goal is to make sure that given 4 sequences to align, each of length 8, like the one in the following figure (so a $4x8$ board
@@ -53,7 +68,7 @@ Note that the GAP is encoded with $5$. Thus, after this phase, we will have a $4
 
 ![Population](/img/population.png)
 
-The number of individuals will then be configurable by the user based on their needs (in the [config.py](config.py) file ). In this generation phase, all possible ranges of size $2x4$ on the board are also calculated (specifically, those ranges for which the agent is trained). Each range is calculated to ensure that all ranges are different and there is no overlap, to prevent the RL agent from operating in areas where it has already performed an alignment on another individual.
+The number of individuals will then be configurable by the user based on their needs (in the [config.py](config.py) file ).
 
 ### Fitness score
 The genetic algorithm has three modes:
@@ -72,48 +87,115 @@ Below is the formula used to calculate column score:
  It is important to note that if the algorithm is used with an RL model that employs different weights for gaps, matches, and mismatches, the fitness score calculation must also be adjusted to use the same weights. This avoids inconsistencies between the weights used by the RL agent and those used by the algorithm. These values can be easily modified in the [config.py](config.py) file of the application.
 
  ### Mutation
- After generating the population, we proceed with the mutation operation, where the RL algorithm comes into play. We have provided two different types of mutations to evaluate their performance and give the user the freedom to choose the most suitable one based on the use case. The first is the random mutation, while the second is the mutation on the best fitted individuals.
+The mutation phase is a critical component of the GA-DPAMSA pipeline. Its goal is to improve the quality of candidate alignments by selectively altering their weakest regions. This phase uses a reinforcement learning (RL) agent to target and modify the sub-region (sub-board) that performs worst according to specific fitness metrics.
 
- 1. **Random mutation** : The random mutation involves randomly selecting an individual in the population to mutate. Based on the number of possible different sub-boards we have, we perform the same number of mutations. For example, in the case of a $4x8$ board like the one in the figure, and an RL agent trained to operate on $2x4$ boards, we generate all unique ranges on the $4x8$ board (in this example, there are 4). For each range, we randomly select an individual in the population and apply the RL agent to that individual in one of those ranges (the range to operate on is also chosen randomly). After performing the mutation, that range is eliminated, and we proceed to mutate another individual on a different sub-board. The mutation phase will end when we have exhausted all possible unique ranges of the sub-boards.
+**Selection of Individuals for Mutation**
 
- 2. **Mutation on the best fitted individuals**: In this case, instead of randomly selecting the individual to operate on, we choose the one with the highest sum-of-pairs score. Specifically, before performing the mutation, the sum-of-pairs is calculated for all individuals. At this point, the best $n$ individuals are selected for mutation (those with the highest sum-of-pairs scores). The number $n$ of individuals to mutate is not based on the number of different sub-boards, as in the previous case, but is a certain percentage of individuals in the population (customizable by the user in the [config.py](config.py) file). For each of these $n$ selected individuals with the highest sum-of-pairs, the sub-board where the RL agent will operate is the one with the lowest sum-of-pairs. In other words, during this mutation phase, given an individual (selected because it had the highest sum-of-pairs on the entire board), the sum-of-pairs is also calculated for each unique sub-board, and the sub-board with the lowest sum-of-pairs is where the RL agent will operate to try to improve that solution. This mutation is computationally more expensive but, as we will see in the [results section](#results), it brings significant benefits, generally leading to better sequence alignment (in terms of sum-of-pairs). The objective of providing these two different methods is to see the extent of improvement in the second case compared to the first, but also to give the user the freedom to prioritize either faster alignment computation (using the first method) or higher alignment quality at the expense of performance. In the following figure, we can see the RL agent operating on the individual, performing the mutation.
+At the beginning of the mutation phase, the algorithm determines how many individuals should undergo mutation. This number is computed as a fraction of the total population, based on a preset mutation rate in the [config.py](config.py). The best-fitted individuals (those with the highest fitness scores) are selected for mutation. By focusing on high-quality candidates, the algorithm aims to improve only the regions that are most likely to benefit from targeted changes.
+
+**Identification of the Worst-Fitted Sub-Board**
+
+For each selected candidate alignment, the mutation phase identifies the worst-performing sub-board. This is achieved by evaluating various sub-regions using metrics such as the Sum-of-Pairs (SP) score and/or the Column Score (CS). The sub-board with the lowest score is considered the weakest link in the alignment and is chosen as the target for mutation.
+
+**Sub-Board Extraction and Preprocessing**
+
+Once the worst sub-board is identified, the following steps are performed:
+- **Extraction:** The specific rows and columns corresponding to the poor-performing region are extracted from the candidate alignment.
+- **Preprocessing:** The extracted sub-board is adjusted to meet the input requirements of the RL agent. This includes:
+  - Padding the sub-board with gap characters (if necessary) so that it matches the required number of rows.
+  - Ensuring that each row of the sub-board contains the required number of columns by appending gaps as needed.
+
+This preprocessing is essential to ensure the RL agent receives input data of consistent dimensions.
+
+**RL Agent Mutation Process**
+With the sub-board prepared, the mutation process proceeds as follows:
+1. **Environment Setup:**  
+   An environment is instantiated with the preprocessed sub-board. This environment encapsulates the state of the sub-board and sets up parameters such as the available actions for mutation.
+   
+2. **RL Agent Initialization:**  
+   A Deep Q-Network (DQN) agent is initialized and loaded with a pre-trained model specified by the provided model path. The agent is responsible for determining which mutations to apply.
+   
+3. **Iterative Mutation:**  
+   The agent interacts with the environment in a loop:
+   - It predicts an action based on the current state of the sub-board.
+   - The predicted action is applied, leading to a modified sub-board and a new state.
+   - This loop continues until a termination condition is met (i.e., when a specific "done" flag indicates that the mutation process should stop).
+   
+4. **Post-Mutation Adjustment:**  
+   Once the mutation loop concludes, the mutated sub-board is passed through a padding function to ensure that any changes are correctly integrated and that the sub-board’s dimensions remain consistent.
 
 ![Mutation](/img/mutation-dpamsa.png)
 
+**Integration of Mutated Sub-Board into the Candidate Alignment**
+After mutation, the algorithm reintegrates the modified sub-board back into the original candidate alignment. The region corresponding to the worst-performing sub-board is replaced with its mutated version. This targeted approach helps improve the overall fitness of the candidate alignment while leaving the well-aligned regions untouched.
+
 ### Selection
-The selection phase of our algorithm involves calculating the sum-of-pairs or the column score for each individual and ordering them based on the obtained value. At this point, only the top $n$ individuals with the highest sum-of-pairs or column score will be selected to generate new individuals and proceed to the next iteration. The value of $n$ can be customized by the user based on their needs and how the algorithm responds to their problem. If the GA is in Multi-Objective mode, the selection will calculate both SP and CS and will select the intersection between the best individuals for every metric.
+In our Genetic Algorithm, selection is carried out using an elitist strategy that is governed by the selection rate defined in [config.py](config.py). Essentially, only the top-performing candidates—determined by their fitness scores—are allowed to survive into the next generation. The method of evaluating fitness depends on the mode of operation. In single-objective modes (either Sum-of-Pairs or Column Score), candidates are ranked directly on that one metric. In multi-objective mode, both metrics are considered together, often through a Pareto Front analysis. This elitism ensures that only a fixed fraction of the best candidates, as dictated by the selection rate, are retained to form the basis for the next generation’s evolution.
 
 ### Crossover
-For the crossover phase, we have provided two different methods for generating new individuals: **vertical crossover** and **horizontal crossover**.  For both methods, two individuals (from those that passed the selection phase) are chosen as pairs, referred to as *Parent 1* and *Parent 2*. From each pair, a new individual will be created until we reach the number 
-$n$ of individuals that we set at the beginning of the algorithm. The selection of *Parent 1* and *Parent 2* is random among the individuals that passed the selection phase.
-- **Vertical crossover**: In vertical crossover, *Parent 1* and *Parent 2* are split in half vertically (the point of division is determined by averaging the length of each row and cutting exactly at the average length). To generate the new individual, the first half is taken from Parent 1 and the second half from Parent 2. The choice of *Parent 1* and *Parent 2* is made randomly.
-In the figure below, an example of this operation is shown.
+The crossover phase is implemented using a horizontal crossover strategy. During this phase, new candidate alignments are generated by combining parts from two parent candidates. Specifically, two distinct parents are randomly selected from the current population, and a random crossover point is chosen along the rows of their alignments. The new candidate is then created by taking the top portion (up to the crossover point) from one parent and the bottom portion (from the crossover point onward) from the other.
 
-![Vertical-crossover](/img/vertical-crossover.png)
+Deep copies of the parent segments are used to ensure that the newly generated candidate is completely independent of its parents. This prevents any unintended modifications in the offspring due to subsequent mutations in the parent alignments. The crossover process is repeated until the number of new individuals, when added to the existing population, reaches the target population size defined in the configuration file.
 
-- **Horizontal crossover**: In horizontal crossover, the individual is split along the rows. Specifically, the number of rows of the board is counted, and a division is made in the middle of the board along the rows (if odd, Parent 1 will contribute one more row than Parent 2). At this point, we combine by taking the first half from Parent 1 and the second half from Parent 2. The figure below shows an example of this crossover.
-
+After the offspring are generated, the fitness scores of the entire population are recalculated. This update reflects the changes introduced by the crossover, ensuring that only the most promising candidates are available for the next phase of the algorithm.
 ![Horizontal-crossover](/img/horizontal-crossover.png)
 
 
 ### Algorithm flow
 Once the application is started, the following operations will be executed over a specified number $n$ of iterations (where $n$ the number of iterations configured for the algorithm, see section [configuration](#configuration)):
 
-1. Mutation: Mutate the individuals in the population.
+The overall flow of the GA-DPAMSA algorithm can be summarized as follows:
 
-2. Calculate Fitness Score: Compute the fitness score for each individual.
+- **Initial Population Generation:**
+  - Create candidate alignments by converting input sequences to numerical representations.
+  - Use a mix of:
+    - **Exact Copies:** A fraction of the population (defined by the clone rate) is generated as direct copies.
+    - **Modified Individuals:** The rest of the population is created by inserting random gaps into the sequences (based on the gap rate).
 
-3. Selection: Select the best individuals to pass to the next generation for generating new individuals.
+- **Fitness Evaluation and Cleanup:**
+  - For each candidate alignment:
+    - Pad sequences to ensure equal length.
+    - Clean unnecessary gap columns.
+    - Calculate fitness scores using:
+      - **Single-Objective Metrics:** Sum-of-Pairs (SP) or Column Score (CS).
+      - **Multi-Objective Metrics:** A combination of SP and CS (often via Pareto Front analysis).
+  - Update the Hall of Fame with the best candidate seen so far.
 
-4. Crossover: Create new individuals through crossover operations.
+- **Evolutionary Iterations (Generations):**
+  - **Mutation Phase:**
+    - Determine the number of individuals to mutate based on the mutation rate.
+    - For each selected candidate:
+      - Identify the worst-performing sub-region (sub-board) using fitness metrics.
+      - Use a Reinforcement Learning (RL) agent to iteratively mutate this sub-board.
+      - Replace the original sub-board with the mutated version.
+      
+  - **Selection Phase:**
+    - Apply an elitist strategy by retaining the top fraction of candidates (as defined by the selection rate in the config).
+    - In single-objective modes, rank candidates directly on SP or CS scores.
+    - In multi-objective mode, consider both metrics (using Pareto Front analysis if needed).
 
-At the end of $n$ iterations, the fitness score is recalculated for each individual (since the cycle ends with crossover, we evaluate the fitness of the newly generated population from the last iteration).
-Next, the individual with the highest sum-of-pairs score is extracted from the population. Its board is then converted back from integers to characters (representing nucleotides). This aligned sequence, along with its sum-of-pairs value, is displayed on the screen and saved into a file in the [results](results/reportDPAMSA_GA/) folder of the project.
+  - **Crossover Phase:**
+    - Generate new candidate alignments through horizontal crossover:
+      - Randomly select two distinct parent candidates.
+      - Choose a random crossover point along the rows.
+      - Create offspring by combining the top portion of one parent with the bottom portion of the other.
+      - Use deep copies to ensure the offspring are independent of their parents.
+      
+  - **Population Update:**
+    - Replace the current population with the selected candidates and newly generated offspring.
+    - Recalculate fitness scores for the updated population.
+    - Update the Hall of Fame if a better candidate is found.
+
+- **Final Output:**
+  - After the specified number of iterations, extract the best alignment stored in the Hall of Fame.
+  - This alignment represents the final, refined solution produced by the GA-DPAMSA process.
+
+---
 
 # How to use GA-DPAMSA
 First clone the repository locally
 ```sh
-git clone https://github.com/strumenti-formali-per-la-bioinformatica/GA-DPAMSA.git
+git clone https://github.com/FLaTNNBio/GA-DPAMSA
 ```
 Place in the project directory and create a virtual environment (highly recommended)
 ```sh
@@ -125,89 +207,231 @@ pip install -r requirements.txt
 ```
 Then appropriately configure the [config.py](./config.py) file according to your needs ([see next section for info](#configuration))
 
+---
+
 ## Configuration
 Several parameters can be set from the [config.py](./config.py) file.
 
 ```py
-GAP_PENALTY = -4
-MISMATCH_PENALTY = -4
-MATCH_REWARD = 4
-GA_POPULATION_SIZE = 5
-GA_NUM_ITERATION = 3
-GA_NUM_MOST_FIT_FOR_ITER = 2
-GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER = 0.20 #20%
+# ===========================
+# Genetic Algorithm (GA) Parameters
+# ===========================
+GAP_PENALTY = -4  # Penalty for inserting a gap
+MISMATCH_PENALTY = -4  # Penalty for a mismatch
+MATCH_REWARD = 4  # Reward for a correct match
 
-#This depend from the training dataset given to the DQN
-AGENT_WINDOW_ROW = 3
-AGENT_WINDOW_COLUMN = 30
-
-DATASET_ROW = 6
-DATASET_COLUMN = 60
-
+AGENT_WINDOW_ROW = 3  # Number of rows in the agent's observation window
+AGENT_WINDOW_COLUMN = 30  # Number of columns in the observation window
+GA_ITERATIONS = 3  # Number of iterations for genetic evolution
+POPULATION_SIZE = 5  # Population size for genetic algorithm
+CLONE_RATE = 0.25  # % of the population to be an exact copy of the input sequences during Population Generation Phase
+GAP_RATE = 0.05  # % of Gap to be added to an individual during Population Generation Phase (calculated on seq. length)
+SELECTION_RATE = 0.5  # % of the population to be selected following a certain criteria
+MUTATION_RATE = 0.25  # % of the population undergo mutation
 ```
 As you can see it is possible to change the weight that is given to a gap, mismatch, match in calculating the sum of pairs through changing the values respectively: ```GAP_PENALTY```, ```MISMATCH_PENALTY``` and ```MATCH_REWARD```. In case they are changed, the model needs to be retrained, as the same values are also used to calculate the reward for the RL agent.
-Then it is possible to change the parameters of the genetic algorithm, such as the number of individuals in the population (```GA_POPULATION_SIZE```), the number of iterations after which to stop the algorithm (```GA_NUM_ITERATION```), the number of individuals to be propagated at each iteration (```GA_NUM_MOST_FIT_FOR_ITER```), and the percentage of individuals to be mutated at each iteration, only in the case best-fitted-mutation is chosen (```GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER```).
-Depending on the dataset that is used for model inference and the training dataset used for DPAMSA, the following parameters need to be changed: ```AGENT_WINDOW_ROW```, ```AGENT_WINDOW_COLUMN```, ```DATASET_ROW```, ```DATASET_COLUMN```.
+Then it is possible to change the parameters of the genetic algorithm, such as the number of individuals in the population (```POPULATION_SIZE```), the number of iterations after which to stop the algorithm (```GA_ITERATIONS```), etc.
+
 The  ```AGENT_WINDOW_ROW``` and ```AGENT_WINDOW_COLUMN``` parameters should be set to the same value as the dataset used to run the DPAMSA model training, so if for example the RL model was trained on dataset containing 3 sequences to be aligned, where each sequence has 30 bases, the values should be set as in the example above.
-Instead, the ```DATASET_ROW``` and ```DATASET_COLUMN``` parameters must be set based on the dataset we are passing to GA-DPAMSA to perform the inference. So if the dataset on which we want to make inference contains tests where 6 sequences need to be aligned where each sequence contains 60 bases, the values ​​must be configured as in the example above. It is also possible to modify other parameters relating to the training of the DPAMSA model from the [config.py](./config.py), for those see [DPAMSA reference paper](https://academic.oup.com/bioinformatics/article/39/11/btad636/7323576).
 
-## Inference
-With the following command you can perform inference on a dataset with GA-DPAMSA:
-```py
-python3 mainGA.py
-```
-To change dataset for inference, you need to insert it into the [datasets/inference_dataset](./datasets/inference_dataset/) folder and import it into the [mainGA.py](./mainGA.py) file, essentially you need to modify the first line, indicating the name of the dataset.
-From the [mainGA.py](./mainGA.py) file it is possible to change the type of mutation and the type of crossover of the genetic algorithm.
-In ```inference``` function, there are two boolean arguments:
-```column_score_mode```: if True, the GA will maximize only the column score
-```multi_objective_mode```: if True, the GA will use the intersection between the to metrics
-These two arguments cannot be True at the same time.
+It is also possible to modify other parameters relating to the training of the DPAMSA model from the [config.py](./config.py), for those see [DPAMSA  README.md](./DPAMSA/README.md).
 
-```python
-for i in range(config.GA_ITERATIONS):
-    # Mutation with the RL agent
-    # ga.random_mutation(model_path)
-    ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)
-
-    # Calculate the fitness score for all individuals, based on the sum-of-pairs
-    ga.calculate_fitness_score()
-
-    # Execute the selection, get only the most fitted individual for the next iteration
-    ga.selection()
-
-    # Crossover, split board in two different part and create new individuals by merging each part by 
-    # taking the first part from one individual and the second part from another individual
-    ga.horizontal_crossover()
-    # ga.vertical_crossover()
-
-```
-In particular, in the ```for``` executed based on the iteration number of the genetic algorithm, it is possible to remove or insert the comment to the function call. In the example above we see that ```ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)``` function is called, you can comment this and uncomment the ```ga.random_mutation(model_path)``` function to use the random mutation. As we can see, the same goes for the horizontal or vertical crossover with the functions ```ga.horizontal_crossover``` and ```ga.vertical_crossover()```
-If you have trained a new model with DPAMSA and you want to use that for inference, just edit the inference function call in mainGA.py and insert the path to the new model.
-
-## Evaluation
-If you want to test GA-DPAMSA, you can run some scripts that run the benchmark on already prepared datasets or you can create some new datasets made from synthetic sequences, launching the [create_fataset.py](datasets/synthetic_dataset_generation/create_dataset.py) script in the datasets folder. From this script you can personalize the  ```num_sequences```, the ```sequence_length```, the ```mutation_rate```, the ```number_of_dataset``` and the ```DATASET_NAME```. The output dataset will be placed in the [/datasets](./datasets/) folder.
-By running the [mainGA.py](./mainGA.py) file on one of these datasets, all the results are inserted in the [reportDPAMSA_GA folder](results/reportDPAMSA_GA/), with the value of the sum-of-pairs and the alignment, for each of the tests in the dataset.
-
+---
 
 ## Training
-To execute the training of the RL model, you neeed to run the [train.py](./train.py) script. In the first row in the script you can modify the import of the training dataset and you can put any dataset you want, as long as you follow the structure of those present in the [dataset/training_dataset](./datasets/training_dataset/) folder. In the call to the multi_train() function you can change the name of the output model, and the model will be inserted into the [result/weightDPAMSA](DPAMSA/weights/) folder at the end of the training.
 
-## Parameters
-The settings used for the genetic algorithm for the test are also shown in the following table:
+Check [DPAMSA  README.md](./DPAMSA/README.md).
 
-|GA Parameter|Value|
-|------------|-----|
-|Population|5|
-|Number of iteration|3|
-|Number of Most fitted individuals to be propagated in the next iteration|2|
-|Percentage of individuals to be mutated by iteration|20%|
-|Type of crossover used| horizontal crossover|
-|Type of mutation used| best fitted individuals|
+---
 
-Obviously the higher the SP score, the better the alignment, so in the case of negative values, the closer we are to 0 the better.
+## Inference
+
+**Prerequisites**
+- **Dataset Module:** By default, the script uses the dataset from `datasets.inference_dataset.dataset1_6x60bp`. Make sure this module is available or modify the `DATASET` constant as needed.
+- **Trained RL Model:** A trained reinforcement learning (RL) model is required for the mutation phase. The default model is specified by `INFERENCE_MODEL` (e.g., `'model_3x30'`).
+- **Configuration File:** The `config.py` file should include parameters like population size, number of GA iterations, selection rate, mutation rate, and window sizes.
+
+**Default Settings**
+
+At the top of the script, several constants control the behavior of the inference:
+
+- **GA_MODE:**  
+  Specifies the evaluation mode. Options include:  
+  - `'sp'` for Sum-of-Pairs mode  
+  - `'cs'` for Column Score mode  
+  - `'mo'` for Multi-Objective mode
+
+- **DATASET:**  
+  Points to the dataset module containing the sequences. The default is `datasets.inference_dataset.dataset1_6x60bp`.
+
+- **INFERENCE_MODEL:**  
+  The identifier or path to the trained RL model used during mutation (default: `'model_3x30'`).
+
+- **DEBUG_MODE:**  
+  A boolean flag that enables detailed logging if set to `True` (default is `False`).
+
+Feel free to modify these values to suit your inference needs.
+
+**Running the Script**
+
+1. **Direct Execution:**
+   - Open a terminal or command prompt.
+   - Navigate to the directory containing `mainGA.py`.
+   - Run the script with the command:
+     ```bash
+     python mainGA.py
+     ```
+   - The script will iterate over the datasets, process each one, and output progress information via a progress bar.
+
+2. **Customizing Inference Parameters:**
+   - Open `mainGA.py` in your preferred text editor.
+   - Modify the constants at the top of the file to change:
+     - The inference mode (`GA_MODE`), for example, set it to `'sp'` for Sum-of-Pairs.
+     - The dataset module (`DATASET`) if you want to use a different dataset.
+     - The RL model path (`INFERENCE_MODEL`) if you have a different model.
+     - The debug mode (`DEBUG_MODE`) if you need detailed logging.
+   - Save your changes and run the script as described above.
+
+**Output Files**
+
+After execution, the script generates two key output files:
+- **Report File:**  
+  Contains detailed information for each dataset processed, including alignment length, fitness scores, and the final alignment.
+  
+- **CSV File:**  
+  Summarizes key metrics for each dataset, making it easy to review the overall performance of the GA-DPAMSA inference.
+
+The paths to these files are constructed using settings from `config.py` and are printed to the console upon completion.
+
+**Troubleshooting**
+
+- **Parameter Errors:**  
+  If you encounter errors regarding window sizes or sequence lengths, double-check that the values in `config.py` (e.g., `AGENT_WINDOW_ROW` and `AGENT_WINDOW_COLUMN`) match the dimensions of your dataset.
+
+---
+
+## Benchmarking
+
+The benchmarking framework evaluates **multiple sequence alignment (MSA) methods** by comparing the performance of **GA-DPAMSA**, the **DPAMSA deep reinforcement learning model**, and **other external MSA tools**, by following these key steps:  
+
+1. **Dataset Selection** – Choosing an MSA dataset for benchmarking.  
+2. **Running GA-DPAMSA** – Performing sequence alignment using the Genetic Algorithm with Reinforcement Learning.  
+3. **Running DPAMSA** – Evaluating the standalone deep reinforcement learning model (DPAMSA).  
+4. **Running External MSA Tools** – Comparing GA-DPAMSA against traditional MSA tools.  
+5. **Generating Reports & Plots** – Summarizing results and visualizing performance metrics.
+
+### **Tools Used**
+
+GA-DPAMSA and DPAMSA were benchmarked against standard bioinformatics MSA tools:  
+
+| **Tool**             | **Description** |
+|----------------------|---------------|
+| **[ClustalOmega](http://www.clustal.org/omega/)** | A fast, accurate multiple sequence alignment tool. |
+| **[MSAProbs](https://msaprobs.sourceforge.net/homepage.htm#latest)**     | Uses probabilistic consistency-based alignment. |
+| **[ClustalW](http://www.clustal.org/clustal2/)**     | A widely used alignment tool with progressive alignment. |
+| **[MAFFT](https://mafft.cbrc.jp/alignment/server/index.html)**        | High-speed multiple sequence alignment tool using FFT. |
+| **[MUSCLE5](https://www.drive5.com/muscle/)**      | Iterative alignment tool designed for high accuracy. |
+| **[UPP](https://github.com/smirarab/sepp/blob/master/README.UPP.md)**          | Handles large-scale alignments using progressive refinement. |
+| **[PASTA](https://github.com/smirarab/pasta)**        | A highly scalable multiple sequence alignment algorithm. |
+
+Each of these tools follows different alignment strategies, providing a **diverse benchmark** for evaluating GA-DPAMSA.
+
+**Note**: the majority of these tools only works on Linux.
 
 
-# How change the RL model?
-If you want to use a totally different model of RL, you need to modify the mutation functions in [GA.py](./GA.py).
-You have to modify the ```mutation_on_best_fitted_individuals_worst_sub_board(model)``` function and ```random_mutation(model)```. You need to edit only the code below the ```#Perform Mutation on the sub-board with RL``` comment in both functions.
+### How Benchmarking Works  
+
+1. **Running the Benchmarking Script**
+
+    Execute the benchmarking process using:
+    ```sh
+     python run_benchmarks.py
+    ```
+
+2. **Selecting Benchmarking Options**
+
+    The script prompts the user to select which tools to benchmark:
+    
+    - Option 1: Run GA-DPAMSA and DPAMSA.
+    - Option 2: Run external MSA tools only.
+    - Option 3: Run both GA-DPAMSA/DPAMSA and external tools.
+
+3. **Dataset Handling**
+
+    Datasets are stored in the `datasets/` folder.
+
+    The script processes datasets sequentially and runs each tool on the same dataset.
+
+4. **Evaluation Metrics**
+
+    Each method is evaluated using the following alignment quality metrics:
+
+    | **Metric**            | **Description** |
+    |---------------------|---------------|
+    |Sum-of-Pairs (SP) | Measures the total pairwise alignment similarity. Higher values indicate better alignments.
+    |Column Score (CS) |Calculates how many columns are fully matched. Expressed as a percentage.
+    |Alignment Length (AL) |The total length of the aligned sequences after insertion of gaps.
+    |Exact Matches (EM) | The number of columns where all sequences perfectly match.
+
+### Output
+
+After running the benchmarking script, results are stored in CSV files and text reports.
+
+- **Reports Directory**
+    
+    Results are saved in:
+    ```bash
+    results/reports/GA-DPAMSA/
+    ```
+    
+    Each dataset will have a corresponding report file, named as:
+
+    ```bash
+    <dataset_name>_MO.txt
+    ```
+    
+    Example content of a report:
+    ```mathematica
+    File: test5
+    Number of Sequences (QTY): 3
+    Alignment Length (AL): 30
+    Sum of Pairs (SP): -104
+    Exact Matches (EM): 5
+    Column Score (CS): 0.167
+    Alignment:
+    AGTCTCGACGCGACCACCGATTATGACATT
+    CCTTTGGCCATCAGGAAAGTAGGCCGCATA
+    TGTACCGTATCCGGCAGCGCAGATCCCCCG
+    ```
+
+- **CSV Results**
+
+    Performance metrics for all tools are stored in:
+
+    ```bash
+    results/benchmarks/csv/
+    ```
+
+    Each tool has its own CSV file with the following structure:
+    
+    ```bash
+    Dataset Name	QTY	AL	SP	EM	CS
+    dataset1	6	72	142	50	0.69
+    dataset2	3	35	89	20	0.74
+    ```
+
+- **Performance Plots**
+
+    Once benchmarking is complete, the script generates comparison plots, stored in:
+    
+    ```bash
+    results/benchmarks/charts/
+    ```
+   
+    These visualizations include:
+   - Box Plots – to show SP and CS distributions.
+   - Bar Plots – for average SP and CS values.
+
+---
+
 
