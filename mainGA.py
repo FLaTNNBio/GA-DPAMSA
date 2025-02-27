@@ -7,7 +7,7 @@ from DPAMSA.env import Environment
 from GA import GA
 import utils
 
-import datasets.inference_dataset.dataset1_6x60bp as inference_dataset
+import datasets.inference_dataset.dataset1_3x30bp as inference_dataset
 
 """
 GA-DPAMSA Inference Script
@@ -42,13 +42,13 @@ Author: https://github.com/FLaTNNBio/GA-DPAMSA
 #                   matched columns.
 #         • 'mo'  → Multi-Objective mode, combining SP and CS metrics for a balanced evaluation.
 #       Choose based on the alignment criteria you want to optimize.
-GA_MODE = 'mo'
+GA_MODE = 'sp'
 
 # Dataset module containing the sequences to be aligned.
 DATASET = inference_dataset
 
 # Identifier or path to the trained RL model used for mutation.
-INFERENCE_MODEL = 'model_3x30'
+INFERENCE_MODEL = 'new_model_3x30'
 
 # Debug mode flag: set to True for detailed logging, False for normal operation.
 DEBUG_MODE = False

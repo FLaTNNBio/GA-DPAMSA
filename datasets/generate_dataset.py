@@ -26,23 +26,23 @@ Output:
 # ================= CONFIGURATION ================= #
 # User-configurable parameters
 num_sequences = 6            # Number of DNA sequences per dataset
-sequence_length = 30         # Length of each sequence
+sequence_length = 60         # Length of each sequence
 mutation_rate = 0.10         # Mutation probability (10%)
 gap_rate = 0.05              # Gap insertion probability (5%)
 number_of_datasets = 50      # Total number of datasets to generate
-min_score_threshold = 10     # Minimum alignment score threshold
+min_score_threshold = 0     # Minimum alignment score threshold
 max_score_threshold = None   # Maximum alignment score threshold (None = no limit)
 
 # Conserved block settings
 num_conserved_blocks = 1      # Number of conserved blocks per sequence
-conserved_block_sizes = [10]  # List of block sizes (one size per block)
+conserved_block_sizes = [18]  # List of block sizes (one size per block)
 
 # Additional options
 fixed_block_position = False  # True = fixed position, False = random position
 mutate_inside_blocks = False  # True = mutations inside blocks allowed, False = only outside
 
 # File paths
-DATASET_NAME = 'new_script_test'
+DATASET_NAME = 'synthetic_dataset_6x60bp'
 FASTA_OUTPUT = os.path.join(config.FASTA_FILES_PATH, DATASET_NAME)
 PY_OUTPUT = os.path.join(config.INFERENCE_DATASET_PATH, f'{DATASET_NAME}.py')
 

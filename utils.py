@@ -876,7 +876,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout(pad=5)
+    plt.tight_layout()
     plt.savefig(os.path.join(dataset_charts_dir, f'sum_of_pairs_distribution.png'), dpi=300)
     plt.close()
 
@@ -902,7 +902,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout(pad=5)
+    plt.tight_layout()
     plt.savefig(os.path.join(dataset_charts_dir, f'column_score_distribution.png'), dpi=300)
     plt.close()
 
@@ -923,7 +923,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         height = bar.get_height()
         plt.text(
             bar.get_x() + bar.get_width() / 2,
-            height + (0.05 * height),
+            height + 0.1,
             f'{height:.2f}',
             ha='center',
             va='bottom',
@@ -936,7 +936,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout(pad=5)
+    plt.tight_layout()
     plt.savefig(os.path.join(dataset_charts_dir, f'mean_sum_of_pairs.png'), dpi=300)
     plt.close()
 
@@ -957,7 +957,7 @@ def plot_metrics(tool_csv_paths, dataset_name):
         height = bar.get_height()
         plt.text(
             bar.get_x() + bar.get_width() / 2,
-            height + (0.03 * height),
+            height + (height * 0.015),
             f'{height:.3f}',
             ha='center',
             va='bottom',
@@ -970,6 +970,6 @@ def plot_metrics(tool_csv_paths, dataset_name):
     plt.xticks(fontweight='bold', fontsize=10)
     plt.xticks(rotation=45, ha='right')
 
-    plt.tight_layout(pad=5)
+    plt.tight_layout()
     plt.savefig(os.path.join(dataset_charts_dir, f'mean_column_score.png'), dpi=300)
     plt.close()

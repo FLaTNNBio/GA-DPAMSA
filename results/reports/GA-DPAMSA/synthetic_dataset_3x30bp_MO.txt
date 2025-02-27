@@ -1,0 +1,550 @@
+File: test0
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+TAGTTTCCAGAGATAACTGTCCATGAGTCA
+AAGTTTGCACAGAAT-GTGACGA-CAGTTC
+GAGTTTGGGGACCCCAAAAACCAATAGTAA
+
+File: test1
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CTAGATT-TG-TAGAG-GTCGTCTCACCCC
+-TCA-TCA-GAGCGAGATTCGTCAGACCCG
+GTAGCTGAGGATATCGCGTCGTAAAACCAC
+
+File: test2
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 16
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TTTACTTTCTGTTATTGTGCCCGGTACCCA
+TCATCGATCTGGGAGAGATCTCGGTCTCAG
+TTGGCGTTCTGGGTAAGACCCCGTTCACGT
+
+File: test3
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+CGGCAAATGTAGCAGGCCGCACTTAAACAG
+CTCCGACACAGCCATCCCCCGCTTCAATAT
+CGAGGAACCTGCCATCGAACTCTTCAATT-
+
+File: test4
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GCCCGAGATATTTCAAAGTACAGATAGTTC
+AGGCGATTTATTCTCGCGAAGCGATCGACC
+-CGCGAGTGCGTGTTATGTACTGCTCGTTC
+
+File: test5
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TACCCCACG-CGGGATAACGGTGCCAGGCT
+GATGACAGG-CGGCAGAACGG-TAGAGCAT
+CAACGCACGGCGCGGGAACGGTATACGG-C
+
+File: test6
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+TTGGAATCCCTCTCGTGGCAGTCCAACTTT
+TT-GTCCTATTCTCAGGCGAGTCCTAACTG
+CTTAAGCCTTTCTCTGGGCAGTGCAATG-A
+
+File: test7
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+AACCCCTGGGCCCGCGATC-GCCACACATA
+AACCGAACAACCCTTGAGCCCCCACACTGA
+AACATATAGGCACGCGATCTGGCCTTAACA
+
+File: test8
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 32
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CACAAGACAGACGAGATAGAACAG-ATATA
+GACAGGAGTCAAG-GATTGTCCATTGGGTA
+CACAGGGTA-AGTAGATTGACTAGTATGTT
+
+File: test9
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+ATACGTGTAATTGTTCG-CTAGC-ACCGAT
+ATACGTTCGACGCTTCCCTGGCA-ATCAAC
+ATACGTGGAACCTTTCACAGACAAACTCTC
+
+File: test10
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+TACGACCGGGACTCCCGGCATAACCTTTCA
+TACCAC-GCGGCAAACGACGTGCCTACGAA
+TAC-ACCGAGACTCAGCACGTCAACTTAAC
+
+File: test11
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GAGGCGTTGACAGCCTTGTATTAAAGCTGC
+TAT-GAGTGCACGCCTTTAATGTACACACA
+AATGTCTTGCCTACCTTGTATGAAA-CTCT
+
+File: test12
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+-TCTTTAGAGGACGATTCCGCGCTGGAG-A
+GCC-TTAGAGTATTTGGCCGCGACGGTCCA
+GATGTTAGAGGGGGAGGCCTCGGACGGACT
+
+File: test13
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+CTGACCGT-ACGAATCAGACACCTGTTTTT
+ATTAG-ATGG-GAATCAAACTCTATCTTAG
+GTGAAGGTATGAAATCACATTCCTGATTGT
+
+File: test14
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+GAGACAT-CTTTCGCAGCTAATCAGCAACG
+TAGACATTTGCCTAAGGCATCTCAGCCATT
+TCTACATTTTCATCCGACACATCAGACCTG
+
+File: test15
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GTCTGTCCTTCCTGATAATGCAGTT-AAAC
+GAGACACCTTACAAACAATTCAGTATAATA
+GTCAGCCCTGTTAGAA-AGTGAGTTCACGC
+
+File: test16
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+CCCTCTCGGTCGGAAAAGG-GACCGCGCCC
+TGCTATGGGTCGGGGCAGGGTAGTAATC-C
+-GGTGTGGGTTGGGAAATAGGGGT-CGTCC
+
+File: test17
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 24
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+AGATTGTGCTTTGTGGTTACAGG-GTACCC
+AGACCGTTC-GGATAATCACCACCGTACCG
+AGACTCTTCTGTCACCTGACATTCGTACTG
+
+File: test18
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 16
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+TGAGCGGGTGTTAAAACCAGTAGCCTTATC
+TC-TGGAGTGTTGAAATTACTGGATCCTTG
+T-ATGGG-CGTTGAATGTACGGGAGCTTTC
+
+File: test19
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+--CGCCACGACAACTCGACGCGGATCTCCT
+ATAACCACGTGAACTGGAGTCGTATCCTCT
+GTAGCCG-ATCAGCGCTATTCAAATCTAGT
+
+File: test20
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CTTGTGGTTGTTCCTTATAGCTGCCGAGGG
+TTTGTGGCTATTCTACGC-GCAGATTCGGC
+CTTGTGGTTAGGCAACTGGACCGAGAAGCG
+
+File: test21
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): -8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+TACGCTAAAGCCTCAATTCTTC-GTTGGGC
+GGCAAAG--GCC-GTTATCTACTGAGGGTT
+TGCTGCA-ACCCTTAAATCTACCGTTGGTT
+
+File: test22
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 16
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GCTA-GGTGTGCATACGTAGGAGAGGATAA
+GCGAGCGTGCAC-CATGTCTTTGTGGCTAA
+GCCAGAGTATGAATCCAGGTTAGTGACTAA
+
+File: test23
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+AGATCTATCGGATACAATTGCCTAAT-AGT
+TAATATATCGGATCAAGTGGCC-CTATTCG
+TCACATATTCGCTCCATCGGCCCAAAGACT
+
+File: test24
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+G-AGATCACAGCTA-CGCAGGATCTTAAAA
+GGGGGACATTCTAGGCTCATGATCTCCAAA
+GTAACGGATGTAAGGGTCATGATTT-CAAA
+
+File: test25
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 16
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+TAAAAGAGCGTGCATGGGGCTTTGTCTCTT
+GAAAGGAGCCC-GACGGGGATCTGCAGATC
+TAAACGAGCTTGATCCTGGACGGGTCTATG
+
+File: test26
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 32
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+CGTACTA-ACCTGAGTGTGTGTGATTGCTA
+GGTGGTCCACCTAACTGTCTGTCAGAGCT-
+GC-AGCTCACCT-A-T-TCCCCGAGAGCTA
+
+File: test27
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): -8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GCTCTCCCATCGACCAGCCGACACCAGAAT
+CCTCCCCCTACAACCAGCC-GCTCTGGCGT
+GTTCGACTGATGACCGTCC-AT-CGGGTAG
+
+File: test28
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 24
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+TGTCCTAAGCGAATTATCTTACTTATTCTA
+CATCCTAAGCAAATGTCTGAAATT-TCTCG
+TTTTGTAAGCGAATATTTTCTATCATCCTC
+
+File: test29
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GGAGAACGATTGCGGCGTCGGATAATTTTT
+GG-CTGAATTTGACACG-CGGATACTTGTT
+GGTTAAAGATCTCTGCGATGGAAGA-TTGT
+
+File: test30
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GACTGATTCAACGTGGAGACCGTTGGGTG-
+GACTCCTTCCACGTGAGCGCCTTTC-CAGC
+GAC-CCTCCTTTGGCGTCTCCTTTCATGGC
+
+File: test31
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+CCTCCGGGACGGATGCCCGCTCCACTATAC
+CCTGATCAGTATCTCCCTGCTCGTATGTGC
+CATACTCATTAGATCACCGCTTGACTAAAC
+
+File: test32
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+GACCGGTAGTGGACTAGGGGTGCGGGTGTC
+GAGTGATACAGGAGCGTCGATGCGGATCTC
+GATCTCAGCTGTGCAATGAGTGCGGGCCCC
+
+File: test33
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GGGATTCACTTCAAGACTCCACCCTTCCGC
+CGGATTTCTTGGCAGCCACCCCCTCCCTG-
+AGTATTGATAAGAAGACTCCCCCCAGTGTT
+
+File: test34
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 32
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+ATGAAGCTTCTTGCAGAGATAACTTCCGAA
+TTCGAGCTTTTCGCGAATAGAAAACACGTG
+TTCGAGCTTAACGC-AATAGGAGGCACCCG
+
+File: test35
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GTGTACAGCACGATCCGGCGAACCCCGAGG
+GACTACCGATGTTTAAAGAGACCTAGGACG
+GAGTACACATGGCTATGTGGAACGTCGCCG
+
+File: test36
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+AGTTAGACTTTGCAGCAAGGGCCTATGAAT
+ACCGTGTGCCTAAAGCCAGTAGCTGTGAAT
+AGTACCTCGGTGCGGAGAGTACCCAAGAAT
+
+File: test37
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): -8
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+AAGAAC-TGACATTCGATGTTCCGGACTGG
+AAGTGA-GGGCAGCCGTCGTGCATCACTCG
+AAGTAGGGA-TTTCAATTGTTCCTTAC-CG
+
+File: test38
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GAGGAATCCACGATTTACC-ATTGCGGGAA
+CGGTT-CTAAT-ATGCACTGAACGCGGA-A
+GGAT--TCAATAATCTACCCATGGCGGACA
+
+File: test39
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): -24
+Exact Matches (EM): 8
+Column Score (CS): 0.267
+Alignment:
+CTTGGCTGAC-TT-AG-CTGTATCTAGGTA
+CTTGGCGGTTGTC-AAAGCTTCTCTAACAG
+CGTGGCT-ACGGTACGAGCCTCTCCTTGAC
+
+File: test40
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+AATGGGTATGAAGCCAAGGGACTAAGGACT
+CAAGGTTATG-GCGGAAGGGGGTGGCGACA
+AAATAGCATGATGC-AAAG--GCAGAGACT
+
+File: test41
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+TGCAAGTGATGTGCACCCTGCTTAACGGAC
+AATATGTGCTTTGGTCCTAACAAAACAGAC
+CAGTTGTGATGGGGTCTGT-GTGAAGGGTC
+
+File: test42
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 32
+Exact Matches (EM): 12
+Column Score (CS): 0.400
+Alignment:
+TCGGCCATGTAGATCGAGTCAATCGCTGGT
+CCTGGCCT-CCCCCACAGTCAATTTCTGGT
+CCGGCCGGAGCCATCAAGTCATGTCCTGGG
+
+File: test43
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): -8
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+CTG-GGTAGCGCGGGCGGGGATTAGGCAAT
+CGTACTCAGCTCGGGCGGGGGGGGAGCGAC
+TTA-CGCTTCGCCGAAGGGG--CAGGCGAG
+
+File: test44
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 8
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+GGAGTCCCGGTACTCGGGCCACCC-GCCCT
+GGACTCGAGGTTTTCGGTCATGAACTAACT
+GGACCCTTCGATGTCGGTAGTATACGCACT
+
+File: test45
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GTGATCGTATTCTCAATGACCCACTTTCTC
+GCCAATAAGTACTCTTAAAACCAGTACCTT
+GTAAA-ATG-TT-CTGAGATCCAGTAGCTT
+
+File: test46
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+A-ATGAAAA-CCTTAAAGTGCCAATTCGCC
+GGAGGGAAAATCTTAGGCAAGGTATACGCC
+GTAGGGAAGATG-AAAGCCTGCA-TATGCC
+
+File: test47
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 11
+Column Score (CS): 0.367
+Alignment:
+TTCCGCGGAGAAGTATGTAGGTTTTAATGT
+TACCGTGGAAAGGGCGGAAATTTGTGGT-T
+TTCCGGAGTGCGGTGCGTAACCGCTCGTAT
+
+File: test48
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 9
+Column Score (CS): 0.300
+Alignment:
+GGGTGAAGATACCTCGTTCCCCTTAAGGTG
+GAGATACCGTGGAACGTTCCCAATCATACG
+GAATTACGG-GCA-AGTTCCAACTAAGCTA
+
+File: test49
+Number of Sequences (QTY): 3
+Alignment Length (AL): 30
+Sum of Pairs (SP): 0
+Exact Matches (EM): 10
+Column Score (CS): 0.333
+Alignment:
+GTCCAAAGAAGAAAGGACTAAGTTGGAATA
+ACTTAACCTCGAAATCGCTAAAATGGTAGG
+GCTTGAAGGAGATAAATTTAAGATCGCAGA
+

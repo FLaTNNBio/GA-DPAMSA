@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 import config
 import utils
-import datasets.inference_dataset.dataset1_3x30bp as inference_dataset
+import datasets.inference_dataset.encode_project_dataset_4x101bp as inference_dataset
 
 """
 Benchmarking Script for MSA Methods
@@ -24,7 +24,7 @@ Author: https://github.com/FLaTNNBio/GA-DPAMSA
 # ===========================
 
 # Ensure the dataset name matches the imported dataset module
-DATASET_NAME = 'dataset1_3x30bp'
+DATASET_NAME = 'encode_project_dataset_4x101bp'
 
 # Ensure DPAMSA model matches dataset size
 DPAMSA_MODEL = 'model_3x30'
@@ -54,7 +54,7 @@ def main():
     tool_csv_paths = {}
 
     # GA-DPAMSA must always be executed
-    ga_csv_path = utils.run_ga_dpamsa_inference('mo', inference_dataset, DATASET_NAME, GA_DPAMSA_MODEL)
+    ga_csv_path = utils.run_ga_dpamsa_inference('sp', inference_dataset, DATASET_NAME, GA_DPAMSA_MODEL)
     tool_csv_paths['GA-DPAMSA'] = ga_csv_path
 
     # Run DPAMSA if option 1 or 3 is selected
