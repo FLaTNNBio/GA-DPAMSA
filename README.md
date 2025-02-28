@@ -47,6 +47,7 @@ Together, these parameters interact to create datasets that can be tailored for 
 
 ---
 
+
 ## How the genetic algorithm is implemented 
 The goal is to make sure that given 4 sequences to align, each of length 8, like the one in the following figure (so a $4x8$ board
 
