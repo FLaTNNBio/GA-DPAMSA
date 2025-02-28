@@ -1,0 +1,11 @@
+File Name,Alignment Length (AL),Number of Sequences (QTY),Sum of Pairs (SP),Exact Matches (EM),Column Score (CS)
+test0.fasta,4,149,-1704,10,0.06711409395973154
+test1.fasta,4,125,-1056,9,0.072
+test2.fasta,4,131,-1832,3,0.022900763358778626
+test3.fasta,4,128,-1000,16,0.125
+test4.fasta,4,149,-1080,31,0.2080536912751678
+test5.fasta,4,125,-632,22,0.176
+test6.fasta,4,128,-1752,4,0.03125
+test7.fasta,4,114,-952,9,0.07894736842105263
+test8.fasta,4,120,-584,25,0.20833333333333334
+test9.fasta,4,135,-1688,5,0.037037037037037035

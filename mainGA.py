@@ -1,97 +1,167 @@
-import datasets.training_dataset.encode_project_dataset_4x101bp as dataset1
-from GA import GA
-import torch
+import csv
 import os
-from env_GA import Environment
-from dqn import DQN
-import config
 from tqdm import tqdm
-import random
+
+import config
+from DPAMSA.env import Environment
+from GA import GA
 import utils
 
-dataset = dataset1
+import datasets.inference_dataset.dataset1_3x30bp as inference_dataset
+
+"""
+GA-DPAMSA Inference Script
+---------------------------
+This script runs the Genetic Algorithm (GA) pipeline as part of the GA-DPAMSA framework 
+for Multiple Sequence Alignment (MSA). The GA is used to evolve a population of alignment 
+solutions over a number of iterations. At each iteration, the pipeline performs mutation 
+(using a Reinforcement Learning agent), selection, and horizontal crossover to improve the 
+alignment quality. The quality is evaluated using metrics such as the Sum-of-Pairs (SP) score 
+and Column Score (CS), or a combination of both in Multi-Objective (MO) mode. A Hall of Fame 
+(HoF) is maintained to store the best individual (alignment) found across all generations.
+
+Key functionalities:
+  - Initialize a population of alignment solutions.
+  - Evolve the population over multiple iterations using mutation, selection, and crossover.
+  - Maintain a Hall of Fame of the best individual (alignment) found so far.
+  - Compute and report alignment metrics (e.g., SP, CS, exact matches, alignment length).
+  - Generate report and CSV files summarizing the performance for each dataset.
+
+Usage:
+  Run this script as the main entry point to perform GA-DPAMSA inference on the specified dataset. 
+  The script processes the dataset(s), evolves alignments using the GA pipeline, and outputs a report 
+  and CSV file with evaluation metrics.
+
+Author: https://github.com/FLaTNNBio/GA-DPAMSA
+"""
+
+# - GA_MODE:
+#       Defines the evaluation mode used by the GA. Available options are:
+#         • 'sp'  → Sum-of-Pairs mode, which optimizes based on pairwise matching scores.
+#         • 'cs'  → Column Score mode, which focuses on maximizing the fraction of exactly
+#                   matched columns.
+#         • 'mo'  → Multi-Objective mode, combining SP and CS metrics for a balanced evaluation.
+#       Choose based on the alignment criteria you want to optimize.
+GA_MODE = 'sp'
+
+# Dataset module containing the sequences to be aligned.
+DATASET = inference_dataset
+
+# Identifier or path to the trained RL model used for mutation.
+INFERENCE_MODEL = 'new_model_3x30'
+
+# Debug mode flag: set to True for detailed logging, False for normal operation.
+DEBUG_MODE = False
 
 
 def output_parameters():
-    print("---------- DPAMSA parameters -----------------")
-    print("Gap penalty: {}".format(config.GAP_PENALTY))
-    print("Mismatch penalty: {}".format(config.MISMATCH_PENALTY))
-    print("Match reward: {}".format(config.MATCH_REWARD))
-    print("Episode: {}".format(config.max_episode))
-    print("Batch size: {}".format(config.batch_size))
-    print("Replay memory size: {}".format(config.replay_memory_size))
-    print("Alpha: {}".format(config.alpha))
-    print("Epsilon: {}".format(config.epsilon))
-    print("Gamma: {}".format(config.gamma))
-    print("Delta: {}".format(config.delta))
-    print("Decrement iteration: {}".format(config.decrement_iteration))
-    print("Update iteration: {}".format(config.update_iteration))
-    print("Device: {}".format(config.device_name))
+    print('\n')
     print("-------- Genetic Algorithm parameters ---------")
     print(f"Window size:{config.AGENT_WINDOW_ROW}x{config.AGENT_WINDOW_COLUMN}")
-    print(f"Population number: {config.GA_POPULATION_SIZE}")
-    print(f"Number of iteration: {config.GA_NUM_ITERATION}")
-    print(f"Number of most fitted individuals selected for iteration: {config.GA_NUM_MOST_FIT_FOR_ITER}")
-    print(f"Percentage of individuals to mutate for iteration (only if is used mutation on the worst-fitted individuals): {config.GA_PERCENTAGE_INDIVIDUALS_TO_MUTATE_FOR_ITER}")
+    print(f"Population Size: {config.POPULATION_SIZE}")
+    print(f"Number of iteration: {config.GA_ITERATIONS}")
+    print(f"Clone Rate: {config.CLONE_RATE * 100}%")
+    print(f"Gap Rate: {config.GAP_RATE * 100}%")
+    print(f"Selection Rate: {config.SELECTION_RATE * 100}%")
+    print(f"Mutation Rate: {config.MUTATION_RATE * 100}%")
     print('\n')
 
-def inference(tag='',start=0, end=1, truncate_file=False, model_path='model', dataset=dataset):
-    output_parameters()
-    print("Dataset number: {}".format(len(dataset.datasets)))
 
-    report_file_name = os.path.join(config.report_path_DPAMSA_GA, "{}.rpt".format(tag))
+def inference(mode, dataset=DATASET, start=0, end=-1, model_path='model_3x30', debug=False, truncate_file=True):
+    """
+        Run the genetic algorithm with a specific inference mode.
 
+        Parameters:
+        -----------
+        - mode (str): The mode of operation. Must be one of:
+            * 'sp'  -> Sum of Pairs mode
+            * 'cs'  -> Column Score mode
+            * 'mo'  -> Multi-Objective mode
+        - dataset: The dataset containing sequences.
+        - start (int): Starting index of datasets to process.
+        - end (int): Ending index of datasets to process (default: -1 for all).
+        - model_path (str): Path to the model used for mutation.
+        - debug (bool): Whether to run GA in debug mode (Detailed Real-Time vision of the algorithm operating) or not.
+        - truncate_file (bool): Whether to overwrite report and CSV files.
+
+        Raises:
+        -------
+        - Exception: If an invalid mode is provided.
+        """
+    # Mode validation
+    valid_modes = {'sp', 'cs', 'mo'}
+    if mode not in valid_modes:
+        raise ValueError(f"Invalid mode '{mode}'. Choose one of {valid_modes}.")
+
+    # Paths definition
+    tag = os.path.splitext(dataset.file_name)[0]
+    mode_tag = {"sp": "Max_SP", "cs": "Max_CS", "mo": "MO"}[mode]
+    report_file_name = os.path.join(config.GA_DPAMSA_REPORTS_PATH, f"{tag}_{mode_tag}.txt")
+    csv_file_name = os.path.join(config.GA_DPAMSA_INF_CSV_PATH, f"{tag}_{mode_tag}_GA_DPAMSA_results.csv")
+
+    # Create or truncate results files
     if truncate_file:
-        with open(report_file_name, 'w') as _:
-            _.truncate()
+        with open(report_file_name, 'w'):
+            pass
+        with open(csv_file_name, 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow(["File Name", "Number of Sequences (QTY)", "Alignment Length (AL)", "Sum of Pairs (SP)",
+                             "Exact Matches (EM)", "Column Score (CS)"])
 
-    for dataset_name in dataset.datasets:
-        
+    # Show DPAMSA and GA configs
+    output_parameters()
+
+    # Inference loop
+    datasets_to_process = dataset.datasets[start:end if end != -1 else len(dataset.datasets)]
+    for index, dataset_name in enumerate(tqdm(datasets_to_process, desc="Processing Datasets"), start):
+
+        # Extract sequences
         if not hasattr(dataset, dataset_name):
             continue
         seqs = getattr(dataset, dataset_name)
 
-        ga = GA(seqs)
-        ga.generate_population()
+        # Initialize Environment
+        env = Environment(seqs, convert_data=False)
 
-        #Check the correct size of the window in which the RL agent operate
-        first_individual = ga.population[0]
-        if config.AGENT_WINDOW_ROW > len(first_individual):
-            print("Window row grater than the number of a sequence")
+        # Initialize and run GA
+        ga = GA(seqs, mode)
+        best_alignment = ga.run(model_path, debug)
 
-            return 
-        
-        sequence_min_length = min(len(genes) for genes in first_individual)
-        if config.AGENT_WINDOW_COLUMN > sequence_min_length:
-            print("Window column grater than the min length of a sequence")
+        # Set alignment to use env utilities
+        Environment.set_alignment(env, best_alignment)
 
-            return 
-        
-        for i in range(config.GA_NUM_ITERATION):
-        
-            #Mutation with the RL agent
-            #ga.random_mutation(model_path)
-            ga.mutation_on_best_fitted_individuals_worst_sub_board(model_path)   
-            #Calculate the fitness score for all individuals, based on the sum-of-pairs
-            ga.calculate_fitness_score()
+        # Compute metrics
+        metrics = utils.calculate_metrics(env)
 
-            #Execute the selection, get only the most fitted individual for the next iteration
-            ga.selection()
+        # Create report
+        report = (
+            f"File: {dataset_name}\n"
+            f"Number of Sequences (QTY): {metrics['QTY']}\n"
+            f"Alignment Length (AL): {metrics['AL']}\n"
+            f"Sum of Pairs (SP): {metrics['SP']}\n"
+            f"Exact Matches (EM): {metrics['EM']}\n"
+            f"Column Score (CS): {metrics['CS']:.3f}\n"
+            f"Alignment:\n{env.get_alignment()}\n\n"
+        )
 
-            #Crossover, split board in two different part and create new individuals by merging each part by 
-            #taking the first part from one individual and the second part from another individual
-            ga.horizontal_crossover()
-            #ga.vertical_crossover()
-        #In the last iteration, we have to perform again the calculation (last operation is the crossover so we need to recheck the score) 
-        ga.calculate_fitness_score()
-        most_fitted_chromosome,sum_pairs_score = ga.get_most_fitted_chromosome()
-        most_fitted_chromosome_converted = ga.get_alignment(most_fitted_chromosome)
-        print(f"Dataset name: {dataset_name}")
-        print(f"SP:{sum_pairs_score}")
-        print(f"Alignment:\n{most_fitted_chromosome_converted}")
-        report = f"Dataset name: {dataset_name}\nSP: {sum_pairs_score}\nAlignment:\n{most_fitted_chromosome_converted}\n\n"
-        with open(os.path.join(config.report_path_DPAMSA_GA, "{}.rpt".format(tag)), 'a') as report_file:
+        # Save results to files
+        with open(report_file_name, 'a') as report_file:
             report_file.write(report)
-            
+
+        with open(csv_file_name, 'a', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow([dataset_name, metrics['QTY'], metrics['AL'], metrics['SP'], metrics['EM'], metrics['CS']])
+
+    print(f"\nInference completed successfully.")
+    print(f"Report saved at: {report_file_name}")
+    print(f"CSV saved at: {csv_file_name}\n\n")
+
+
 if __name__ == "__main__":
-    inference(model_path='model_3x30',tag=dataset.file_name)
+    """
+       Available inference modes:
+       - 'sp'  -> Sum of Pairs mode
+       - 'cs'  -> Column Score mode
+       - 'mo'  -> Multi-Objective mode
+    """
+    inference(mode=GA_MODE, dataset=DATASET, model_path=INFERENCE_MODEL, debug=DEBUG_MODE)
